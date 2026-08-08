@@ -1,0 +1,293 @@
+/* IkerCare 2 — mobile navigation layer */
+.legacy-nav { display: none !important; }
+
+#app {
+  padding-bottom: calc(102px + env(safe-area-inset-bottom));
+}
+
+.app-bottom-nav {
+  position: fixed;
+  z-index: 48;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  min-height: 76px;
+  padding: 7px 5px calc(7px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, .97);
+  border-top: 1px solid #dce4ee;
+  box-shadow: 0 -10px 30px rgba(30, 46, 72, .08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.app-nav-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 58px;
+  margin: 0 1px;
+  padding: 5px 2px 4px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: #5d6a7d;
+  font-weight: 760;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s ease, background .15s ease, transform .15s ease;
+}
+
+.app-nav-btn:active { transform: scale(.96); }
+.app-nav-icon {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+.app-nav-icon svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.app-nav-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.1;
+  letter-spacing: -.1px;
+}
+
+.app-nav-btn.active:not(.chemo-nav-btn) {
+  color: var(--primary-strong, #0e467f);
+  background: #edf5ff;
+}
+.app-nav-btn.active:not(.chemo-nav-btn)::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  width: 22px;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--primary, #185fb8);
+}
+
+.chemo-nav-btn {
+  color: #6735aa;
+  font-weight: 830;
+}
+.chemo-nav-btn .app-nav-icon {
+  width: 42px;
+  height: 42px;
+  margin-top: -17px;
+  border-radius: 15px;
+  color: #fff;
+  background: linear-gradient(145deg, #7b4ac5, #5b299b);
+  box-shadow: 0 8px 20px rgba(91, 41, 155, .28);
+  border: 3px solid #fff;
+}
+.chemo-nav-btn .app-nav-icon svg { width: 22px; height: 22px; stroke-width: 2.2; }
+.chemo-nav-btn.active {
+  color: #54228f;
+  background: #f4effd;
+}
+.chemo-nav-btn.active .app-nav-icon {
+  background: linear-gradient(145deg, #6f3db9, #4d1d88);
+  box-shadow: 0 9px 22px rgba(77, 29, 136, .34);
+}
+
+/* Dedicated chemotherapy screen */
+.chemo-screen .chemo-title { margin-bottom: 13px; }
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  margin-bottom: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f1eafd;
+  color: #5d299e;
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: .25px;
+  text-transform: uppercase;
+}
+.chemo-screen .screen-title h1 { color: #43206f; }
+.chemo-feature-card {
+  border: 1px solid #d8c6f4 !important;
+  background: linear-gradient(145deg, #fff 0%, #f7f2ff 100%) !important;
+  box-shadow: 0 12px 32px rgba(82, 43, 138, .10) !important;
+}
+.chemo-feature-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(#7b4ac5, #5b299b);
+}
+.chemo-feature-card .card-head h2 { color: #51258f; }
+.chemo-feature-card [data-open="chemoDialog"] {
+  background: #6735aa !important;
+  color: #fff !important;
+  box-shadow: 0 5px 14px rgba(103, 53, 170, .20);
+}
+
+/* More bottom sheet */
+.more-sheet {
+  width: min(100%, 560px);
+  max-width: 560px;
+  max-height: min(78dvh, 680px);
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: 28px 28px 0 0;
+  color: var(--text, #172033);
+  background: #fff;
+  box-shadow: 0 -18px 55px rgba(19, 34, 57, .20);
+  overflow: hidden;
+}
+.more-sheet[open] { animation: sheetUp .20s ease-out; }
+.more-sheet::backdrop {
+  background: rgba(17, 27, 45, .42);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+@keyframes sheetUp {
+  from { transform: translateY(18px); opacity: .65; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.more-sheet-inner {
+  overflow: auto;
+  max-height: min(78dvh, 680px);
+  padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+}
+.sheet-handle {
+  width: 42px;
+  height: 5px;
+  margin: 2px auto 13px;
+  border-radius: 99px;
+  background: #d1d9e4;
+}
+.more-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 13px;
+}
+.more-sheet-head h2 {
+  margin: 0;
+  font-size: 25px;
+  line-height: 1.1;
+  letter-spacing: -.5px;
+}
+.more-close {
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  flex: 0 0 auto;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: #f0f3f7 !important;
+  color: #344156 !important;
+  font-size: 27px !important;
+  font-weight: 450 !important;
+  line-height: 1 !important;
+}
+.more-grid { display: grid; grid-template-columns: 1fr; gap: 9px; }
+.more-item {
+  display: grid !important;
+  grid-template-columns: 48px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px !important;
+  padding: 10px 12px !important;
+  text-align: left;
+  border: 1px solid #dde5ef !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+  color: #1d2a3e !important;
+  box-shadow: 0 3px 11px rgba(33, 50, 75, .045);
+}
+.more-item:active { background: #f6f9fc !important; transform: scale(.992); }
+.more-item-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #edf5ff;
+  color: #175cae;
+}
+.more-item:nth-child(2) .more-item-icon { background: #eef8f3; color: #187557; }
+.more-item:nth-child(3) .more-item-icon { background: #f4effd; color: #6735aa; }
+.more-item:nth-child(4) .more-item-icon { background: #fff5e9; color: #915508; }
+.more-item-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.more-item-copy { min-width: 0; display: block; }
+.more-item-copy strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.25;
+}
+.more-item-copy small {
+  display: block;
+  margin-top: 3px;
+  color: #647287;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.more-item-arrow { color: #8592a3; font-size: 26px; line-height: 1; }
+.more-sheet-foot {
+  margin: 14px 3px 0;
+  color: #6a778a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 390px) {
+  .app-bottom-nav { padding-left: 2px; padding-right: 2px; }
+  .app-nav-label { font-size: 10px; }
+  .app-nav-btn { margin: 0; }
+  .chemo-nav-btn .app-nav-icon { width: 40px; height: 40px; }
+}
+
+@media (min-width: 620px) {
+  .app-bottom-nav {
+    left: 50%;
+    right: auto;
+    bottom: 10px;
+    transform: translateX(-50%);
+    width: min(610px, calc(100% - 24px));
+    border: 1px solid #dce4ee;
+    border-radius: 24px;
+    padding-bottom: 7px;
+  }
+  #app { padding-bottom: 104px; }
+  .more-sheet { border-radius: 28px 28px 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-sheet[open], .app-nav-btn { animation: none !important; transition: none !important; }
+}
