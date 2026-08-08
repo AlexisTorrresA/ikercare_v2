@@ -11,5 +11,5 @@ pypdf==5.9.0
 PyMuPDF==1.26.3
 pytesseract==0.3.13
 qrcode[pil]==8.2
-pytest==8.4.1
+pytest==9.1.1
 httpx==0.28.1
