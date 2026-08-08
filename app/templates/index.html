@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#365fcb">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>IkerCare · {{ child_name }}</title>
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/favicon-64.png" type="image/png">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="app-page">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">IC</span>
+      <div>
+        <strong>IkerCare</strong>
+        <span>Control diario de {{ child_name }}</span>
+      </div>
+    </div>
+    <form method="post" action="/logout">
+      <button class="button button-ghost logout-button" type="submit" aria-label="Cerrar sesión">
+        <span class="logout-icon" aria-hidden="true">↪</span><span class="logout-text">Cerrar sesión</span>
+      </button>
+    </form>
+  </header>
+
+  <div class="safety-banner" id="safety-banner">
+    <span><strong>Importante:</strong> confirma siempre dosis, horarios y cambios con el equipo clínico. Ante una crisis o deterioro, avisa al personal del hospital de inmediato.</span>
+    <button id="dismiss-safety-banner" type="button" aria-label="Ocultar aviso">Ocultar</button>
+  </div>
+
+  <main class="app-shell">
+    <section class="hero-panel">
+      <div>
+        <p class="eyebrow">Registro clínico familiar</p>
+        <h1 id="page-title">Día de {{ child_name }}</h1>
+        <p class="muted" id="human-date"></p>
+      </div>
+      <div class="date-actions">
+        <button class="icon-button" id="previous-day" type="button" aria-label="Día anterior">←</button>
+        <input id="selected-date" type="date" value="{{ today }}" aria-label="Fecha seleccionada">
+        <button class="icon-button" id="next-day" type="button" aria-label="Día siguiente">→</button>
+        <button class="button button-secondary" id="today-button" type="button">Hoy</button>
+      </div>
+    </section>
+
+    <section class="summary-grid" id="summary-grid" aria-live="polite">
+      <article class="summary-card"><span>Medicamentos</span><strong id="summary-medications">—</strong><small id="summary-medications-detail">Cargando…</small></article>
+      <article class="summary-card"><span>Signos vitales</span><strong id="summary-vitals">—</strong><small>Registros del día</small></article>
+      <article class="summary-card"><span>Eventos/crisis</span><strong id="summary-crises">—</strong><small>Observaciones registradas</small></article>
+      <article class="summary-card"><span>Quimioterapia</span><strong id="summary-chemo">—</strong><small>Sesiones del día</small></article>
+    </section>
+
+    <nav class="tabs desktop-tabs" aria-label="Secciones">
+      <button class="tab active" data-tab="medications" type="button">Medicamentos</button>
+      <button class="tab" data-tab="chemo" type="button">Quimioterapia</button>
+      <button class="tab" data-tab="vitals" type="button">Signos vitales</button>
+      <button class="tab" data-tab="crises" type="button">Crisis y eventos</button>
+      <button class="tab" data-tab="notes" type="button">Notas</button>
+      <button class="tab" data-tab="settings" type="button">Configurar</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-medications">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Horario ordenado</p>
+          <h2>Medicamentos del día</h2>
+        </div>
+        <span class="pill" id="medication-progress">0 de 0 tomados</span>
+      </div>
+      <div id="medication-list" class="timeline"></div>
+      <div id="medication-empty" class="empty-state hidden">No hay medicamentos con horario fijo para este día.</div>
+
+      <div class="panel unscheduled-panel">
+        <div class="section-heading compact-heading">
+          <div>
+            <p class="eyebrow">SOS, rescate o sin hora definida</p>
+            <h3>Medicamentos sin horario fijo</h3>
+          </div>
+          <span class="pill" id="unscheduled-count">0 administraciones</span>
+        </div>
+        <p class="muted">Registra aquí solo lo que efectivamente administre el equipo clínico. Puedes agregar un comentario con el motivo o la respuesta observada.</p>
+        <div id="unscheduled-medication-list" class="record-list"></div>
+        <div id="unscheduled-medication-empty" class="empty-state hidden">No hay medicamentos activos sin horario fijo.</div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-chemo">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Tratamiento oncológico</p>
+          <h2>Quimioterapia</h2>
+        </div>
+      </div>
+      <div class="two-column">
+        <form id="chemo-form" class="panel form-panel">
+          <h3>Agregar sesión o medicamento de quimio</h3>
+          <div class="form-grid">
+            <label>Fecha y hora<input id="chemo-date" type="datetime-local" required></label>
+            <label>Nombre<input id="chemo-name" type="text" placeholder="Ej.: Vincristina" required></label>
+            <label>Protocolo<input id="chemo-protocol" type="text" placeholder="Opcional"></label>
+            <label>Ciclo / día<input id="chemo-cycle" type="text" placeholder="Ej.: Ciclo 1 · Día 3"></label>
+            <label class="span-2">Objetivo / para qué sirve<input id="chemo-purpose" type="text" placeholder="Información entregada por el equipo"></label>
+            <label>Estado
+              <select id="chemo-status">
+                <option value="scheduled">Programada</option>
+                <option value="in_progress">En curso</option>
+                <option value="completed">Completada</option>
+                <option value="postponed">Postergada</option>
+                <option value="cancelled">Cancelada</option>
+              </select>
+            </label>
+            <label class="span-2">Notas<textarea id="chemo-notes" rows="3" placeholder="Tolerancia, premedicación, observaciones…"></textarea></label>
+            <label class="span-2">Efectos adversos observados<textarea id="chemo-effects" rows="3" placeholder="Registrar y avisar al equipo clínico"></textarea></label>
+          </div>
+          <button class="button button-primary" type="submit">Guardar quimioterapia</button>
+        </form>
+        <div class="panel">
+          <h3>Registros del día</h3>
+          <div id="chemo-list" class="record-list"></div>
+          <div id="chemo-empty" class="empty-state hidden">No hay registros de quimioterapia.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-vitals">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Seguimiento</p>
+          <h2>Signos vitales</h2>
+        </div>
+      </div>
+      <div class="two-column">
+        <form id="vitals-form" class="panel form-panel">
+          <h3>Nuevo registro</h3>
+          <div class="form-grid">
+            <label class="span-2">Fecha y hora<input id="vital-date" type="datetime-local" required></label>
+            <label>Temperatura °C<input id="vital-temperature" type="number" min="30" max="45" step="0.1" inputmode="decimal"></label>
+            <label>Saturación O₂ %<input id="vital-oxygen" type="number" min="0" max="100" inputmode="numeric"></label>
+            <label>Presión sistólica<input id="vital-systolic" type="number" min="20" max="300" inputmode="numeric"></label>
+            <label>Presión diastólica<input id="vital-diastolic" type="number" min="10" max="200" inputmode="numeric"></label>
+            <label>Frecuencia cardíaca<input id="vital-heart" type="number" min="20" max="350" inputmode="numeric"></label>
+            <label>Frecuencia respiratoria<input id="vital-respiratory" type="number" min="0" max="150" inputmode="numeric"></label>
+            <label>Peso kg<input id="vital-weight" type="number" min="0.5" max="300" step="0.01" inputmode="decimal"></label>
+            <label class="span-2">Comentarios<textarea id="vital-notes" rows="3" placeholder="Posición, estado, síntomas, quién midió…"></textarea></label>
+          </div>
+          <button class="button button-primary" type="submit">Guardar signos vitales</button>
+        </form>
+        <div class="panel table-panel">
+          <h3>Registros del día</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Hora</th><th>Temp.</th><th>PA</th><th>FC</th><th>Sat.</th><th>FR</th><th></th></tr></thead>
+              <tbody id="vitals-table-body"></tbody>
+            </table>
+          </div>
+          <div id="vitals-empty" class="empty-state hidden">Aún no hay signos vitales registrados.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-crises">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Observación clínica</p>
+          <h2>Crisis y otros eventos</h2>
+        </div>
+      </div>
+      <div class="urgent-note">Este registro no sustituye avisar al equipo médico. Ante convulsión, dificultad respiratoria, alteración de conciencia o empeoramiento, llama al personal inmediatamente.</div>
+      <div class="two-column">
+        <form id="crisis-form" class="panel form-panel">
+          <h3>Registrar evento</h3>
+          <div class="form-grid">
+            <label>Fecha y hora<input id="crisis-date" type="datetime-local" required></label>
+            <label>Tipo de evento<input id="crisis-type" type="text" placeholder="Convulsión, vómito, temblor…" required></label>
+            <label>Duración en segundos<input id="crisis-duration" type="number" min="0" max="86400" inputmode="numeric"></label>
+            <label>Estado de conciencia<input id="crisis-consciousness" type="text" placeholder="Lúcido, somnoliento…"></label>
+            <label class="span-2">Descripción<textarea id="crisis-description" rows="4" required placeholder="Qué ocurrió antes, durante y después"></textarea></label>
+            <label class="span-2">Acciones realizadas<textarea id="crisis-actions" rows="3" placeholder="Se avisó, posición, medicación indicada…"></textarea></label>
+            <label class="checkbox-line span-2"><input id="crisis-notified" type="checkbox"> Se avisó al equipo clínico</label>
+            <label class="span-2">Comentarios adicionales<textarea id="crisis-notes" rows="3"></textarea></label>
+          </div>
+          <button class="button button-danger" type="submit">Guardar evento</button>
+        </form>
+        <div class="panel">
+          <h3>Eventos del día</h3>
+          <div id="crisis-list" class="record-list"></div>
+          <div id="crisis-empty" class="empty-state hidden">No hay eventos registrados.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-notes">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Resumen libre</p>
+          <h2>Notas del día</h2>
+        </div>
+      </div>
+      <div class="panel">
+        <textarea id="daily-note" class="large-textarea" rows="14" placeholder="Alimentación, sueño, ánimo, deposiciones, dolor, preguntas para la visita médica…"></textarea>
+        <div class="form-footer">
+          <span class="muted" id="note-status">Sin cambios</span>
+          <button class="button button-primary" id="save-note" type="button">Guardar nota</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-settings">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Tratamiento vigente</p>
+          <h2>Configurar medicamentos</h2>
+        </div>
+        <button class="button button-secondary" id="export-button" type="button">Exportar últimos 30 días</button>
+      </div>
+      <div class="two-column">
+        <form id="medication-form" class="panel form-panel">
+          <h3 id="medication-form-title">Agregar medicamento</h3>
+          <input id="medication-id" type="hidden">
+          <div class="form-grid">
+            <label>Nombre<input id="medication-name" type="text" required></label>
+            <label>Tipo<input id="medication-type" type="text" placeholder="Anticonvulsivo, antibiótico…" required></label>
+            <label class="span-2">Para qué sirve<input id="medication-purpose" type="text" placeholder="Según explicación del equipo médico"></label>
+            <label>Dosis<input id="medication-dose" type="text" placeholder="Ej.: 1 mg"></label>
+            <label>Vía<input id="medication-route" type="text" placeholder="Oral, intravenosa…"></label>
+            <label class="span-2">Frecuencia<input id="medication-frequency" type="text" placeholder="Cada 12 horas, SOS, previo a VCR…"></label>
+            <label class="span-2">Horas separadas por coma
+              <input id="medication-times" type="text" placeholder="07:00, 15:00, 23:00">
+              <small class="muted">Déjalo vacío para medicamentos SOS, de rescate o cuya hora aún no está confirmada.</small>
+            </label>
+            <label class="span-2">Indicaciones<textarea id="medication-instructions" rows="4" placeholder="Con alimento, qué hacer si vomita, observaciones…"></textarea></label>
+            <label class="checkbox-line span-2"><input id="medication-active" type="checkbox" checked> Medicamento activo</label>
+          </div>
+          <div class="button-row">
+            <button class="button button-primary" type="submit">Guardar medicamento</button>
+            <button class="button button-ghost hidden" id="cancel-medication-edit" type="button">Cancelar edición</button>
+          </div>
+        </form>
+        <div class="panel">
+          <h3>Medicamentos configurados</h3>
+          <div id="settings-medication-list" class="record-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="mobile-nav" aria-label="Navegación principal">
+    <button class="mobile-tab active" data-tab="medications" type="button"><span aria-hidden="true">💊</span><small>Remedios</small></button>
+    <button class="mobile-tab" data-tab="chemo" type="button"><span aria-hidden="true">✚</span><small>Quimio</small></button>
+    <button class="mobile-tab" data-tab="vitals" type="button"><span aria-hidden="true">♥</span><small>Signos</small></button>
+    <button class="mobile-tab" data-tab="crises" type="button"><span aria-hidden="true">⚠</span><small>Eventos</small></button>
+    <button class="mobile-tab mobile-more-trigger" id="mobile-more-trigger" type="button" aria-expanded="false"><span aria-hidden="true">•••</span><small>Más</small></button>
+  </nav>
+
+  <div class="mobile-sheet-layer hidden" id="mobile-sheet-layer" aria-hidden="true">
+    <button class="mobile-sheet-backdrop" id="mobile-sheet-backdrop" type="button" aria-label="Cerrar menú"></button>
+    <section class="mobile-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-sheet-title">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="mobile-sheet-heading">
+        <div><p class="eyebrow">IkerCare</p><h2 id="mobile-sheet-title">Más opciones</h2></div>
+        <button class="icon-button" id="mobile-sheet-close" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <div class="mobile-sheet-actions">
+        <button class="sheet-action" data-tab="notes" type="button"><span aria-hidden="true">📝</span><span><strong>Notas del día</strong><small>Observaciones y preguntas</small></span></button>
+        <button class="sheet-action" data-tab="settings" type="button"><span aria-hidden="true">⚙</span><span><strong>Configurar medicamentos</strong><small>Horarios, dosis y exportación</small></span></button>
+        <button class="sheet-action" id="mobile-export-button" type="button"><span aria-hidden="true">⇩</span><span><strong>Exportar 30 días</strong><small>Descargar registros en CSV</small></span></button>
+        <button class="sheet-action hidden" id="native-server-settings" type="button"><span aria-hidden="true">⌁</span><span><strong>Cambiar servidor</strong><small>Dirección del Lenovo Y700</small></span></button>
+        <form method="post" action="/logout">
+          <button class="sheet-action danger-action" type="submit"><span aria-hidden="true">↪</span><span><strong>Cerrar sesión</strong><small>Salir de IkerCare</small></span></button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

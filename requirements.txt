@@ -1,0 +1,15 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+SQLAlchemy==2.0.43
+psycopg[binary]==3.2.9
+Jinja2==3.1.6
+python-multipart==0.0.20
+itsdangerous==2.2.0
+cryptography==45.0.6
+Pillow==11.3.0
+pypdf==5.9.0
+PyMuPDF==1.26.3
+pytesseract==0.3.13
+qrcode[pil]==8.2
+pytest==8.4.1
+httpx==0.28.1

@@ -1,0 +1,357 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b6bcb">
+  <title>IkerCare 2</title>
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/favicon-64.png">
+  <link rel="stylesheet" href="/static/v2.css">
+</head>
+<body>
+  <div id="app" data-csrf="{{ csrf_token }}" data-privacy-version="{{ privacy_version }}">
+    <header class="topbar">
+      <div>
+        <strong>IkerCare 2</strong>
+        <span class="muted">Registro familiar de salud</span>
+      </div>
+      <select id="patientSelect" aria-label="Paciente"></select>
+    </header>
+
+    <div id="legalBanner" class="legal-banner hidden">
+      <strong>Actualización de privacidad requerida.</strong>
+      <p>Antes de usar las funciones nuevas debes aceptar la política vigente y declarar que tienes autorización para administrar los datos del paciente.</p>
+      <label><input type="checkbox" id="guardianCheck"> Declaro que soy padre, madre, representante legal o cuidador autorizado.</label>
+      <label><input type="checkbox" id="privacyCheck"> Acepto el tratamiento de datos para las finalidades de la aplicación y la política de privacidad vigente.</label>
+      <button id="acceptLegalBtn" class="primary">Aceptar y continuar</button>
+      <a href="/privacy" target="_blank" rel="noreferrer">Ver política</a>
+    </div>
+
+    <main>
+      <section class="screen active" data-screen="today">
+        <div class="screen-title">
+          <div>
+            <h1>Hoy</h1>
+            <p class="muted">Medicamentos, cuidados y eventos del día.</p>
+          </div>
+          <input id="selectedDate" type="date">
+        </div>
+
+        <div id="syncNotice" class="sync-notice hidden">Hay cambios de otro cuidador. Actualizando…</div>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Medicamentos</h2>
+            <button class="small secondary" data-open="medicationDialog">+ Agregar</button>
+          </div>
+          <div id="medicationList" class="stack"></div>
+        </article>
+
+        <div class="grid2">
+          <article class="card">
+            <div class="card-head"><h2>Pañal / pipí</h2><button class="small secondary" data-open="eliminationDialog">+ Registrar</button></div>
+            <div id="eliminationList" class="stack compact"></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><h2>Comida</h2><button class="small secondary" data-open="foodDialog">+ Registrar</button></div>
+            <div id="foodList" class="stack compact"></div>
+          </article>
+        </div>
+
+        <article class="card">
+          <h2>Nota del día</h2>
+          <textarea id="dailyNote" rows="4" placeholder="Observaciones, preguntas para el equipo, cambios del día…"></textarea>
+          <button id="saveNoteBtn" class="secondary">Guardar nota</button>
+        </article>
+      </section>
+
+      <section class="screen" data-screen="care">
+        <div class="screen-title">
+          <div><h1>Cuidados</h1><p class="muted">Signos vitales, crisis y quimioterapia.</p></div>
+        </div>
+        <div class="grid2">
+          <article class="card">
+            <div class="card-head"><h2>Signos vitales</h2><button class="small secondary" data-open="vitalDialog">+ Registrar</button></div>
+            <div id="vitalList" class="stack compact"></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><h2>Crisis / eventos</h2><button class="small secondary" data-open="crisisDialog">+ Registrar</button></div>
+            <div id="crisisList" class="stack compact"></div>
+          </article>
+        </div>
+        <article class="card">
+          <div class="card-head"><h2>Quimioterapia</h2><button class="small secondary" data-open="chemoDialog">+ Registrar</button></div>
+          <div id="chemoList" class="stack compact"></div>
+        </article>
+      </section>
+
+      <section class="screen" data-screen="team">
+        <div class="screen-title"><div><h1>Equipo tratante</h1><p class="muted">Médicos y profesionales a cargo.</p></div><button class="secondary" data-open="teamDialog">+ Profesional</button></div>
+        <div id="teamList" class="cards-grid"></div>
+
+        <article class="card">
+          <div class="card-head"><h2>Cuidadores con acceso</h2><button class="small secondary" data-open="memberDialog">+ Compartir acceso</button></div>
+          <p class="muted">Owner administra permisos; editor puede registrar; viewer solo consulta.</p>
+          <div id="memberList" class="stack compact"></div>
+        </article>
+      </section>
+
+      <section class="screen" data-screen="history">
+        <div class="screen-title">
+          <div><h1>Historia y línea temporal</h1><p class="muted">Hospitalizaciones, exámenes, diagnósticos, procedimientos y otros hitos.</p></div>
+          <div class="button-row">
+            <button class="secondary" data-open="hospitalizationDialog">+ Hospitalización</button>
+            <button class="secondary" data-open="historyDialog">+ Hito</button>
+          </div>
+        </div>
+        <div id="timeline" class="timeline"></div>
+      </section>
+
+      <section class="screen" data-screen="documents">
+        <div class="screen-title"><div><h1>Exámenes e informes</h1><p class="muted">PDF o imágenes. El texto se extrae automáticamente cuando es posible.</p></div><button class="secondary" data-open="documentDialog">+ Subir</button></div>
+        <div class="notice">Los documentos se guardan cifrados. Antes de un lanzamiento público a gran escala conviene migrar los archivos a almacenamiento de objetos cifrado con políticas de retención.</div>
+        <div id="documentList" class="cards-grid"></div>
+      </section>
+
+      <section class="screen" data-screen="share">
+        <div class="screen-title"><div><h1>Resumen y compartir</h1><p class="muted">Genera un resumen temporal de solo lectura para otro profesional u hospital.</p></div></div>
+        <article class="card">
+          <div class="form-grid">
+            <label>Idioma
+              <select id="summaryLanguage"><option value="es">Español</option><option value="en">English</option></select>
+            </label>
+            <label>Nivel
+              <select id="summaryDetail"><option value="simple">Resumen simple</option><option value="complete">Completo</option></select>
+            </label>
+            <label>Desde <input id="summaryStart" type="date"></label>
+            <label>Hasta <input id="summaryEnd" type="date"></label>
+          </div>
+          <div class="button-row">
+            <button id="generateSummaryBtn" class="secondary">Generar resumen</button>
+            <button id="createShareBtn" class="primary">Crear QR temporal</button>
+          </div>
+          <pre id="summaryText" class="summary-box"></pre>
+          <div id="shareResult" class="share-result hidden">
+            <img id="shareQr" alt="Código QR temporal">
+            <div>
+              <label>Enlace temporal</label>
+              <input id="shareUrl" readonly>
+              <p id="shareExpiry" class="muted"></p>
+              <button id="copyShareBtn" class="secondary">Copiar enlace</button>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <h2>Enlaces activos y anteriores</h2>
+          <div id="shareList" class="stack compact"></div>
+        </article>
+      </section>
+
+      <section class="screen" data-screen="account">
+        <div class="screen-title"><div><h1>Cuenta y paciente</h1><p class="muted">Datos, seguridad, privacidad y eliminación.</p></div></div>
+        <div class="grid2">
+          <article class="card">
+            <h2>Paciente</h2>
+            <form id="patientForm" class="form-grid">
+              <label>Nombre<input name="name" required></label>
+              <label>Fecha de nacimiento<input name="birth_date" type="date"></label>
+              <label>Sexo al nacer<input name="sex_at_birth"></label>
+              <label>Hospital principal<input name="primary_hospital"></label>
+              <label>Ficha / identificador<input name="medical_record"></label>
+              <label class="wide">Alergias<textarea name="allergies"></textarea></label>
+              <label class="wide">Diagnósticos registrados<textarea name="diagnoses"></textarea></label>
+              <label class="wide">Notas<textarea name="notes"></textarea></label>
+              <button class="primary wide" type="submit">Guardar perfil</button>
+            </form>
+            <div class="photo-upload">
+              <img id="patientPhoto" alt="Foto del paciente" class="patient-photo hidden">
+              <input id="patientPhotoInput" type="file" accept="image/jpeg,image/png,image/webp">
+              <button id="uploadPhotoBtn" class="secondary">Subir foto</button>
+            </div>
+          </article>
+          <article class="card danger-zone">
+            <h2>Privacidad y seguridad</h2>
+            <p><a href="/privacy" target="_blank" rel="noreferrer">Política de privacidad</a></p>
+            <p>Este registro familiar no sustituye la ficha clínica del hospital ni sirve para diagnosticar, tratar, curar o prevenir enfermedades.</p>
+            <button id="logoutBtn" class="secondary">Cerrar sesión</button>
+            <hr>
+            <h3>Eliminar cuenta</h3>
+            <p class="muted">La eliminación es irreversible. Los pacientes que solo tú administras también se eliminan; si existen otros propietarios autorizados, sus registros compartidos pueden mantenerse.</p>
+            <input id="deletePassword" type="password" placeholder="Contraseña">
+            <input id="deleteConfirm" placeholder="Escribe ELIMINAR">
+            <button id="deleteAccountBtn" class="danger">Eliminar mi cuenta</button>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav mobile-nav" aria-label="Navegación principal">
+      <button class="nav-btn active" data-nav="today">Hoy</button>
+      <button class="nav-btn" data-nav="care">Cuidados</button>
+      <button class="nav-btn" data-nav="team">Equipo</button>
+      <button class="nav-btn" data-nav="history">Historia</button>
+      <button class="nav-btn" data-nav="documents">Exámenes</button>
+      <button class="nav-btn" data-nav="share">Compartir</button>
+      <button class="nav-btn" data-nav="account">Cuenta</button>
+    </nav>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+
+    <dialog id="medicationDialog">
+      <form method="dialog" id="medicationForm" class="dialog-form">
+        <div class="dialog-head"><h2>Agregar medicamento</h2><button value="cancel" class="icon-btn" aria-label="Cerrar">×</button></div>
+        <label>Nombre<input id="medName" name="name" autocomplete="off" required><div id="medSuggestions" class="suggestions hidden"></div></label>
+        <label>Tipo<input id="medType" name="medication_type"></label>
+        <label>Para qué sirve<textarea id="medPurpose" name="purpose"></textarea></label>
+        <div class="form-grid">
+          <label>Dosis<input name="dose"></label><label>Vía<input name="route"></label>
+          <label>Frecuencia<input name="frequency"></label><label>Horas (coma)<input name="times" placeholder="07:00,15:00,23:00"></label>
+        </div>
+        <label>Indicaciones<textarea name="instructions"></textarea></label>
+        <button class="primary" value="default">Guardar</button>
+      </form>
+    </dialog>
+
+    <dialog id="eliminationDialog">
+      <form method="dialog" id="eliminationForm" class="dialog-form">
+        <div class="dialog-head"><h2>Pañal / eliminación</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Fecha y hora<input name="occurred_at" type="datetime-local" required></label>
+        <label>Pañal<select name="diaper_status"><option value="wet">Mojado</option><option value="soiled">Deposición</option><option value="wet_and_soiled">Pipí + deposición</option><option value="dry">Seco</option></select></label>
+        <label>Cantidad de pipí<select name="urine_amount"><option value="">—</option><option value="small">Poca</option><option value="medium">Media</option><option value="large">Mucha</option><option value="none">Nada</option></select></label>
+        <label>Color de orina<input name="urine_color"></label>
+        <label>Deposición<input name="stool_description" placeholder="Aspecto, color, consistencia…"></label>
+        <label>Notas<textarea name="notes"></textarea></label>
+        <button class="primary">Guardar</button>
+      </form>
+    </dialog>
+
+    <dialog id="foodDialog">
+      <form method="dialog" id="foodForm" class="dialog-form">
+        <div class="dialog-head"><h2>Registrar comida</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Fecha y hora<input name="occurred_at" type="datetime-local" required></label>
+        <label>Tipo<input name="meal_type" placeholder="Desayuno, pecho, colación…"></label>
+        <label>Alimento / bebida<input name="item" required></label>
+        <div class="form-grid"><label>Cantidad<input name="amount" type="number" step="0.1"></label><label>Unidad<input name="unit" placeholder="ml, g, porción…"></label></div>
+        <label><input name="tolerated" type="checkbox" checked> Toleró bien</label>
+        <label><input name="vomiting" type="checkbox"> Hubo vómito</label>
+        <label>Notas<textarea name="notes"></textarea></label>
+        <button class="primary">Guardar</button>
+      </form>
+    </dialog>
+
+    <dialog id="teamDialog">
+      <form method="dialog" id="teamForm" class="dialog-form">
+        <div class="dialog-head"><h2>Profesional tratante</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Nombre<input name="name" required></label>
+        <label>Especialidad<input name="specialty"></label>
+        <label>Rol<input name="role" placeholder="Médico tratante, enfermera, kinesiólogo…"></label>
+        <label>Hospital<input name="hospital"></label>
+        <div class="form-grid"><label>Teléfono<input name="phone"></label><label>Email<input name="email" type="email"></label></div>
+        <label><input name="is_primary" type="checkbox"> Profesional principal</label>
+        <label>Notas<textarea name="notes"></textarea></label>
+        <button class="primary">Guardar</button>
+      </form>
+    </dialog>
+
+    <dialog id="memberDialog">
+      <form method="dialog" id="memberForm" class="dialog-form">
+        <div class="dialog-head"><h2>Dar acceso</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Usuario de IkerCare<input name="username" required></label>
+        <label>Permiso<select name="role"><option value="editor">Editor</option><option value="viewer">Solo lectura</option><option value="owner">Propietario</option></select></label>
+        <p class="notice">Solo agregues personas autorizadas para acceder a los datos de salud del paciente.</p>
+        <button class="primary">Guardar acceso</button>
+      </form>
+    </dialog>
+
+    <dialog id="hospitalizationDialog">
+      <form method="dialog" id="hospitalizationForm" class="dialog-form">
+        <div class="dialog-head"><h2>Hospitalización</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Hospital<input name="hospital" required></label>
+        <label>Servicio<input name="service"></label>
+        <div class="form-grid"><label>Ingreso<input name="admission_at" type="datetime-local" required></label><label>Alta<input name="discharge_at" type="datetime-local"></label></div>
+        <label>Motivo<textarea name="reason"></textarea></label>
+        <label>Diagnóstico<textarea name="diagnosis"></textarea></label>
+        <label>Resumen<textarea name="summary"></textarea></label>
+        <label>Epicrisis / texto<textarea name="epicrisis_text"></textarea></label>
+        <button class="primary">Guardar</button>
+      </form>
+    </dialog>
+
+    <dialog id="historyDialog">
+      <form method="dialog" id="historyForm" class="dialog-form">
+        <div class="dialog-head"><h2>Agregar hito</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Fecha y hora<input name="occurred_at" type="datetime-local" required></label>
+        <label>Categoría<select name="category"><option value="exam">Examen</option><option value="diagnosis">Diagnóstico</option><option value="procedure">Procedimiento</option><option value="treatment">Tratamiento</option><option value="consultation">Consulta</option><option value="milestone">Hito</option><option value="other">Otro</option></select></label>
+        <label>Título<input name="title" required></label>
+        <label>Descripción<textarea name="description"></textarea></label>
+        <label>Hospital<input name="hospital"></label>
+        <label>Profesional<input name="clinician_name"></label>
+        <button class="primary">Guardar</button>
+      </form>
+    </dialog>
+
+    <dialog id="documentDialog">
+      <form method="dialog" id="documentForm" class="dialog-form">
+        <div class="dialog-head"><h2>Subir examen o informe</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Archivo<input name="file" type="file" accept=".pdf,image/jpeg,image/png,image/webp" required></label>
+        <label>Tipo<select name="document_type"><option value="exam">Examen</option><option value="report">Informe</option><option value="epicrisis">Epicrisis</option><option value="prescription">Indicación / receta</option><option value="other">Otro</option></select></label>
+        <label>Nombre del examen<input name="exam_name"></label>
+        <label>Hospital<input name="hospital"></label>
+        <label>Fecha<input name="event_date" type="date"></label>
+        <p class="notice">La extracción de texto es automática y puede contener errores. Conserva siempre el documento original y verifica la información clínica importante.</p>
+        <button class="primary">Subir y procesar</button>
+      </form>
+    </dialog>
+
+    <dialog id="vitalDialog">
+      <form method="dialog" id="vitalForm" class="dialog-form">
+        <div class="dialog-head"><h2>Signos vitales</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Fecha y hora<input name="recorded_at" type="datetime-local" required></label>
+        <div class="form-grid">
+          <label>Temperatura °C<input name="temperature_c" type="number" step="0.1"></label>
+          <label>Presión sistólica<input name="systolic" type="number"></label>
+          <label>Presión diastólica<input name="diastolic" type="number"></label>
+          <label>Frecuencia cardíaca<input name="heart_rate" type="number"></label>
+          <label>SatO₂ %<input name="oxygen_saturation" type="number"></label>
+          <label>Frecuencia respiratoria<input name="respiratory_rate" type="number"></label>
+          <label>Peso kg<input name="weight_kg" type="number" step="0.01"></label>
+        </div>
+        <label>Notas<textarea name="notes"></textarea></label>
+        <button class="primary">Guardar</button>
+      </form>
+    </dialog>
+
+    <dialog id="crisisDialog">
+      <form method="dialog" id="crisisForm" class="dialog-form">
+        <div class="dialog-head"><h2>Crisis / evento</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Fecha y hora<input name="occurred_at" type="datetime-local" required></label>
+        <label>Tipo<input name="event_type" required placeholder="Convulsión, vómito, temblor…"></label>
+        <label>Duración (segundos)<input name="duration_seconds" type="number"></label>
+        <label>Conciencia<input name="consciousness"></label>
+        <label>Descripción<textarea name="description" required></textarea></label>
+        <label>Acciones realizadas<textarea name="actions_taken"></textarea></label>
+        <label><input name="team_notified" type="checkbox"> Se avisó al equipo clínico</label>
+        <label>Notas<textarea name="notes"></textarea></label>
+        <button class="primary">Guardar</button>
+      </form>
+    </dialog>
+
+    <dialog id="chemoDialog">
+      <form method="dialog" id="chemoForm" class="dialog-form">
+        <div class="dialog-head"><h2>Quimioterapia</h2><button value="cancel" class="icon-btn">×</button></div>
+        <label>Fecha y hora<input name="scheduled_at" type="datetime-local" required></label>
+        <label>Nombre<input name="name" required></label>
+        <div class="form-grid"><label>Protocolo<input name="protocol"></label><label>Ciclo<input name="cycle"></label></div>
+        <label>Objetivo<input name="purpose"></label>
+        <label>Estado<select name="status_value"><option value="scheduled">Programada</option><option value="in_progress">En curso</option><option value="completed">Completada</option><option value="postponed">Postergada</option><option value="cancelled">Cancelada</option></select></label>
+        <label>Notas<textarea name="notes"></textarea></label>
+        <label>Efectos adversos<textarea name="adverse_effects"></textarea></label>
+        <button class="primary">Guardar</button>
+      </form>
+    </dialog>
+  </div>
+  <script src="/static/v2.js" defer></script>
+</body>
+</html>

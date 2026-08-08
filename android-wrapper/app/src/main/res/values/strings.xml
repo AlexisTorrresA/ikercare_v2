@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">IkerCare</string>
+    <string name="login_title">Tu espacio de cuidado</string>
+    <string name="login_subtitle">Ingresa de forma segura para ver los pacientes a los que tienes acceso.</string>
+    <string name="username">Usuario</string>
+    <string name="password">Contraseña</string>
+    <string name="sign_in">Ingresar</string>
+    <string name="create_account">Crear cuenta</string>
+    <string name="privacy_policy">Privacidad y tratamiento de datos</string>
+    <string name="connection_error">No se pudo conectar con IkerCare. Verifica tu conexión a Internet e inténtalo nuevamente.</string>
+    <string name="retry">Reintentar</string>
+    <string name="sign_out">Cerrar sesión</string>
+    <string name="notification_channel">Recordatorios de medicamentos</string>
+    <string name="notification_channel_description">Recordatorios familiares de horarios registrados en IkerCare.</string>
+</resources>

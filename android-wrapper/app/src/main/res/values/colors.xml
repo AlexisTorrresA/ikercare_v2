@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ikercare_primary">#365FCB</color>
+    <color name="ikercare_primary_dark">#24489F</color>
+    <color name="ikercare_background">#F4F7FB</color>
+    <color name="white">#FFFFFF</color>
+</resources>

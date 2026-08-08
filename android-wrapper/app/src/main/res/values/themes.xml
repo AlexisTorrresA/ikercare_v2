@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.IkerCare" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/ikercare_primary</item>
+        <item name="colorPrimaryContainer">@color/ikercare_primary_dark</item>
+        <item name="android:statusBarColor">@color/ikercare_primary_dark</item>
+        <item name="android:navigationBarColor">@color/white</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">@color/ikercare_background</item>
+    </style>
+</resources>
