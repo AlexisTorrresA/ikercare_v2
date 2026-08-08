@@ -1,0 +1,76 @@
+/* IkerCare 2.0.2 - visual dashboard and medication emphasis */
+:root {
+  --visual-blue: #3569dc;
+  --visual-blue-dark: #244fac;
+  --visual-green: #1d9259;
+  --visual-green-dark: #147246;
+  --visual-amber: #c7811b;
+  --visual-purple: #7448cf;
+  --visual-surface: #ffffff;
+  --visual-bg: #eef3fb;
+}
+body { background: radial-gradient(circle at 100% 0, rgba(53,105,220,.11), transparent 24rem), linear-gradient(180deg, #f7f9fd 0%, var(--visual-bg) 100%); }
+.topbar > div:first-child { position: relative; min-height: 48px; padding-left: 58px; display:flex; flex-direction:column; justify-content:center; }
+.topbar > div:first-child::before { content:"IC"; position:absolute; left:0; top:50%; transform:translateY(-50%); width:46px; height:46px; display:grid; place-items:center; border-radius:15px; color:#fff; font-size:17px; font-weight:850; letter-spacing:.02em; background:linear-gradient(145deg,#477be8,#2857bd); box-shadow:0 8px 18px rgba(45,91,195,.22); }
+.visual-day-summary { margin:0 0 18px; }
+.visual-summary-card { position:relative; overflow:hidden; padding:18px; border:1px solid #cedcf8; border-radius:26px; background:linear-gradient(145deg,#fff 0%,#f0f5ff 100%); box-shadow:0 12px 28px rgba(44,83,164,.11); }
+.visual-summary-card::after { content:""; position:absolute; width:180px; height:180px; right:-85px; top:-95px; border-radius:50%; background:rgba(60,111,230,.08); pointer-events:none; }
+.visual-summary-head { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.visual-summary-kicker { display:inline-flex; align-items:center; min-height:28px; padding:5px 10px; border-radius:999px; background:#e5edff; color:#3158ba; font-size:11px; font-weight:850; letter-spacing:.11em; text-transform:uppercase; }
+.visual-summary-head h2 { margin:9px 0 3px; color:#14213b; font-size:26px; line-height:1.08; letter-spacing:-.5px; }
+.visual-summary-head p { margin:0; color:#62728c; font-size:14px; }
+.visual-summary-head p strong { color:#22365e; }
+.visual-progress { --progress:0%; flex:0 0 88px; width:88px; height:88px; padding:8px; border-radius:26px; background:conic-gradient(var(--visual-green) var(--progress),#dbe5f7 var(--progress)); box-shadow:0 7px 18px rgba(24,112,72,.13); }
+.visual-progress > div { width:100%; height:100%; display:grid; place-items:center; align-content:center; border-radius:20px; background:#fff; text-align:center; }
+.visual-progress strong { color:#174a35; font-size:20px; line-height:1; }
+.visual-progress span { margin-top:4px; color:#75829a; font-size:9px; font-weight:750; text-transform:uppercase; }
+.visual-status-strip { position:relative; z-index:1; display:flex; flex-wrap:wrap; gap:7px; margin:15px 0 12px; }
+.status-chip { display:inline-flex; align-items:center; min-height:30px; padding:6px 10px; border-radius:999px; border:1px solid transparent; font-size:12px; font-weight:800; }
+.status-chip.meds { color:#3158ba; background:#e8efff; border-color:#d8e4ff; }
+.status-chip.pending { color:#405774; background:#f1f4f8; border-color:#e1e7ef; }
+.status-chip.skipped { color:#a36510; background:#fff5e6; border-color:#f4dfbc; }
+.visual-metrics-grid { position:relative; z-index:1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+.visual-metric { min-height:84px!important; display:grid!important; justify-items:start!important; align-content:center!important; gap:2px!important; padding:11px!important; border:1px solid #dce5f4!important; border-radius:18px!important; background:#fff!important; color:#27354e!important; box-shadow:0 4px 12px rgba(45,68,105,.05)!important; text-align:left; }
+.visual-metric .metric-icon { display:inline-grid; place-items:center; min-width:28px; height:28px; padding:0 6px; border-radius:9px; background:#e8efff; color:#315cc5; font-size:12px; font-weight:900; }
+.visual-metric.chemo .metric-icon { background:#f1eaff; color:var(--visual-purple); }
+.visual-metric.vital .metric-icon { background:#e9f8ef; color:var(--visual-green); }
+.visual-metric.event .metric-icon { background:#fff3e4; color:#b16b13; }
+.visual-metric strong { display:block; margin-top:3px; color:#17233e; font-size:24px; line-height:1; }
+.visual-metric small { color:#6f7c91; font-size:11px; font-weight:700; }
+.visual-medications-section { padding:0!important; border:0!important; background:transparent!important; box-shadow:none!important; overflow:visible!important; }
+.visual-medications-section > .card-head { margin:3px 1px 12px; padding:0 2px; }
+.visual-medications-section > .card-head h2 { color:#2f4fa0; font-size:18px; letter-spacing:.04em; }
+#medicationList { display:grid; gap:14px; }
+.med-row.visual-med-card { display:grid!important; grid-template-columns:82px minmax(0,1fr)!important; gap:0!important; align-items:stretch!important; min-height:0!important; padding:0!important; overflow:hidden; border:1px solid #bfd3fb!important; border-radius:25px!important; background:#fff!important; box-shadow:0 10px 23px rgba(40,74,145,.10); }
+.med-row.visual-med-card.done { border-color:#98d8b5!important; }
+.med-row.visual-med-card.skipped { border-color:#efc98f!important; }
+.visual-time-rail { min-height:100%; display:flex; align-items:center; justify-content:center; padding:18px 8px; background:linear-gradient(180deg,#4478e5 0%,#315fc8 100%); color:#fff; }
+.visual-time-rail span { color:#fff; font-size:18px; font-weight:900; letter-spacing:.015em; text-shadow:0 1px 2px rgba(20,44,99,.20); }
+.visual-med-card.done .visual-time-rail { background:linear-gradient(180deg,#219c61 0%,#17814e 100%); }
+.visual-med-card.skipped .visual-time-rail { background:linear-gradient(180deg,#db962f 0%,#b96f12 100%); }
+.visual-med-content { padding:16px 14px 14px; min-width:0; }
+.visual-med-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.visual-med-copy { min-width:0; }
+.visual-med-copy h3 { margin:0 0 9px; color:#172239; font-size:20px; line-height:1.15; letter-spacing:-.2px; overflow-wrap:anywhere; }
+.visual-med-pills { display:flex; flex-wrap:wrap; gap:7px; }
+.visual-med-pill { display:inline-flex; align-items:center; min-height:31px; max-width:100%; padding:6px 11px; border-radius:999px; background:#f0f3f8; color:#5a6880; font-size:12px; font-weight:750; line-height:1.25; }
+.visual-med-pill.type { background:#e9efff; color:#3152a8; }
+.visual-med-pill.dose { background:#f3f2f7; color:#657086; }
+.visual-med-pill.route,.visual-med-pill.frequency { background:#f2f4f8; color:#66758b; }
+.visual-check-slot .check-btn { width:50px!important; min-width:50px!important; height:50px!important; min-height:50px!important; padding:0!important; border:2px solid #b7c4d7!important; border-radius:15px!important; background:#fff!important; color:#fff!important; font-size:26px!important; box-shadow:none!important; }
+.visual-med-card.done .visual-check-slot .check-btn { border-color:var(--visual-green)!important; background:var(--visual-green)!important; color:#fff!important; }
+.visual-med-card.skipped .visual-check-slot .check-btn { border-color:#e3b873!important; color:#b36e15!important; }
+.visual-med-status-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0 7px; }
+.visual-med-status { display:inline-flex; align-items:center; min-height:28px; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:850; }
+.visual-med-status.taken { background:#e8f8ef; color:#167d4c; }
+.visual-med-status.pending { background:#e9efff; color:#3158ba; }
+.visual-med-status.skipped { background:#fff1df; color:#ae6811; }
+.visual-med-helper { color:#758198; font-size:12px; font-weight:650; }
+.visual-med-purpose { margin:8px 0 0; color:#2d3950; font-size:15px; line-height:1.5; }
+.visual-med-purpose strong { color:#172239; }
+.visual-med-instructions { margin:7px 0 0; color:#718096; font-size:14px; line-height:1.52; }
+.visual-med-actions { display:flex; justify-content:stretch; margin-top:12px; }
+.visual-med-actions .skip-btn { width:100%; min-height:44px!important; border:1px solid #d7dfeb!important; border-radius:14px!important; background:#fff!important; color:#657086!important; font-weight:750!important; }
+.visual-med-card.skipped .visual-med-actions .skip-btn { border-color:#e8bd7d!important; background:#fffaf2!important; color:#a66614!important; }
+@media (max-width:680px) { main{padding-left:10px;padding-right:10px;} .visual-summary-card{padding:16px;} .visual-summary-head{align-items:flex-start;} .visual-summary-head h2{font-size:23px;} .visual-progress{flex-basis:78px;width:78px;height:78px;border-radius:22px;} .visual-progress>div{border-radius:17px;} .visual-metrics-grid{display:flex;gap:9px;overflow-x:auto;padding:1px 0 3px;scroll-snap-type:x proximity;scrollbar-width:none;} .visual-metrics-grid::-webkit-scrollbar{display:none;} .visual-metric{flex:0 0 126px;scroll-snap-align:start;} .med-row.visual-med-card{grid-template-columns:76px minmax(0,1fr)!important;} .visual-time-rail span{font-size:17px;} .visual-med-content{padding:15px 12px 13px;} .visual-med-copy h3{font-size:18px;} .visual-med-top{gap:8px;} .visual-check-slot .check-btn{width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;} }
+@media (max-width:390px) { .topbar{grid-template-columns:minmax(0,1fr) minmax(112px,38%);} .topbar>div:first-child{padding-left:50px;} .topbar>div:first-child::before{width:42px;height:42px;border-radius:14px;} .visual-summary-head{display:grid;grid-template-columns:1fr auto;} .visual-summary-head p{font-size:13px;} .med-row.visual-med-card{grid-template-columns:70px minmax(0,1fr)!important;} .visual-med-pill{font-size:11px;padding:5px 9px;} }
