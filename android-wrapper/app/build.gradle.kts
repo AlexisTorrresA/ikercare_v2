@@ -13,7 +13,7 @@ android {
         targetSdk = 36
         versionCode = 20
         versionName = "2.0.0"
-        buildConfigField("String", "IKERCARE_BASE_URL", "\"https://care-app-j73n.onrender.com\"")
+        buildConfigField("String", "IKERCARE_BASE_URL", "\"https://ikercare-v2.onrender.com\"")
     }
 
     buildFeatures { buildConfig = true }
