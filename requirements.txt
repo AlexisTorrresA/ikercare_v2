@@ -3,7 +3,7 @@ uvicorn[standard]==0.35.0
 SQLAlchemy==2.0.43
 psycopg[binary]==3.2.9
 Jinja2==3.1.6
-python-multipart==0.0.20
+python-multipart==0.0.32
 itsdangerous==2.2.0
 cryptography==45.0.6
 Pillow==11.3.0
