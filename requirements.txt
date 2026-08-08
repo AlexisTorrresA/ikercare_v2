@@ -8,7 +8,7 @@ itsdangerous==2.2.0
 cryptography==45.0.6
 Pillow==11.3.0
 pypdf==5.9.0
-PyMuPDF==1.26.3
+PyMuPDF==1.28.0
 pytesseract==0.3.13
 qrcode[pil]==8.2
 pytest==8.4.1
