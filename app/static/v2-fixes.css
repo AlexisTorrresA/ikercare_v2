@@ -1,0 +1,32 @@
+.targeted-fix-card { margin-top: 14px; }
+.targeted-fix-card .card-head p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.targeted-med-list { display: grid; gap: 10px; }
+.targeted-med-item {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fbfcff;
+}
+.targeted-med-copy strong { display: block; font-size: 17px; color: var(--text); }
+.targeted-med-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.targeted-med-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+.targeted-med-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.targeted-delete-med { background: var(--danger-soft) !important; color: var(--danger) !important; }
+.targeted-new-patient { width: 100%; }
+@media (min-width: 520px) {
+  .targeted-med-item { grid-template-columns: minmax(0,1fr) auto; align-items: center; }
+  .targeted-med-actions { grid-template-columns: auto auto; }
+  .targeted-new-patient { width: auto; justify-self: start; }
+}
