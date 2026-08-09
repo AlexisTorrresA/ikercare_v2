@@ -12,9 +12,10 @@
     });
   }
 
-  loadScript("/static/v2-core.js?v=2.0.2")
-    .then(() => loadScript("/static/v2-nav.js?v=2.0.2"))
-    .then(() => loadScript("/static/v2-visual.js?v=2.0.2"))
-    .then(() => loadScript("/static/v2-bugfixes.js?v=2.0.3"))
+  loadScript("/static/v2-core.js?v=2.0.4")
+    .then(() => loadScript("/static/v2-nav.js?v=2.0.4"))
+    .then(() => loadScript("/static/v2-visual.js?v=2.0.4"))
+    .then(() => loadScript("/static/v2-bugfixes.js?v=2.0.4"))
+    .then(() => loadScript("/static/v2-patient-actions.js?v=2.0.4"))
     .catch(error => console.error("No se pudo cargar IkerCare 2", error));
 })();
