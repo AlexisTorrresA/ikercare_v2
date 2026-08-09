@@ -10,6 +10,7 @@ import android.os.Environment
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
+import android.webkit.ServiceWorkerController
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -62,8 +63,8 @@ class MainActivity : AppCompatActivity() {
         configureWebView()
         requestNotificationPermissionIfNeeded()
 
-        swipeRefresh.setOnRefreshListener { webView.reload() }
-        findViewById<Button>(R.id.retryButton).setOnClickListener { loadApp() }
+        swipeRefresh.setOnRefreshListener { loadFreshApp() }
+        findViewById<Button>(R.id.retryButton).setOnClickListener { loadFreshApp() }
         findViewById<Button>(R.id.errorLogoutButton).setOnClickListener { showNativeLogin(clearSession = true) }
         findViewById<Button>(R.id.loginButton).setOnClickListener { performLogin() }
         findViewById<Button>(R.id.registerButton).setOnClickListener { showRegistrationDialog() }
@@ -81,12 +82,10 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        // La sesión web se conserva en CookieManager. Si expiró, /v2 redirige a /login
-        // y el WebView vuelve a mostrar este login nativo.
         if (CookieManager.getInstance().getCookie(serverUrl).isNullOrBlank()) {
             showNativeLogin(clearSession = false)
         } else {
-            loadApp()
+            loadFreshApp()
         }
     }
 
@@ -104,14 +103,18 @@ class MainActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
             databaseEnabled = true
-            cacheMode = WebSettings.LOAD_DEFAULT
+            cacheMode = WebSettings.LOAD_NO_CACHE
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             builtInZoomControls = false
             displayZoomControls = false
             allowFileAccess = false
             allowContentAccess = false
-            userAgentString = "$userAgentString IkerCareAndroid/2.0"
+            userAgentString = "$userAgentString IkerCareAndroid/2.0.4"
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            ServiceWorkerController.getInstance().serviceWorkerWebSettings.cacheMode = WebSettings.LOAD_NO_CACHE
+        }
+        webView.clearCache(true)
         webView.addJavascriptInterface(NativeBridge(), "IkerCareNative")
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -195,7 +198,7 @@ class MainActivity : AppCompatActivity() {
             setLoginBusy(false)
             if (ok) {
                 passwordInput.setText("")
-                loadApp()
+                loadFreshApp()
             } else {
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
@@ -252,7 +255,7 @@ class MainActivity : AppCompatActivity() {
                 postAuth("/api/v2/auth/register", payload) { ok, message ->
                     if (ok) {
                         dialog.dismiss()
-                        loadApp()
+                        loadFreshApp()
                     } else {
                         dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
                         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
@@ -275,7 +278,7 @@ class MainActivity : AppCompatActivity() {
                     instanceFollowRedirects = false
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     setRequestProperty("Accept", "application/json")
-                    setRequestProperty("User-Agent", "IkerCareAndroid/2.0")
+                    setRequestProperty("User-Agent", "IkerCareAndroid/2.0.4")
                 }
                 connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                 val code = connection.responseCode
@@ -306,13 +309,19 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.registerButton).isEnabled = !busy
     }
 
-    private fun loadApp() {
+    private fun loadFreshApp() {
         errorPanel.visibility = View.GONE
         loginPanel.visibility = View.GONE
         swipeRefresh.visibility = View.VISIBLE
         webView.visibility = View.VISIBLE
         swipeRefresh.isRefreshing = true
-        webView.loadUrl("$serverUrl/v2")
+        webView.stopLoading()
+        webView.clearCache(true)
+        val versionToken = System.currentTimeMillis()
+        webView.loadUrl(
+            "$serverUrl/v2?native_refresh=$versionToken",
+            mapOf("Cache-Control" to "no-cache, no-store, max-age=0", "Pragma" to "no-cache")
+        )
     }
 
     private fun showNativeLogin(clearSession: Boolean) {
