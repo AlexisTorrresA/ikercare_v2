@@ -52,7 +52,9 @@
                 android:autofillHints="username"
                 android:hint="@string/username"
                 android:inputType="text"
-                android:maxLines="1" />
+                android:maxLines="1"
+                android:textColor="#172033"
+                android:textColorHint="#64748B" />
 
             <EditText
                 android:id="@+id/passwordInput"
@@ -62,7 +64,9 @@
                 android:autofillHints="password"
                 android:hint="@string/password"
                 android:inputType="textPassword"
-                android:maxLines="1" />
+                android:maxLines="1"
+                android:textColor="#172033"
+                android:textColorHint="#64748B" />
 
             <ProgressBar
                 android:id="@+id/loginProgress"
