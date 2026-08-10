@@ -11,36 +11,38 @@ from .v2_models import CareChemoSession, Patient, PatientMember
 
 SOURCE_MARKER = "user_chemo_cycle1_2026_08"
 
-# Datos confirmados por el usuario a partir de las etiquetas del primer ciclo.
-# Son únicamente dos agentes. La hora y la vía fueron confirmadas explícitamente por el usuario.
+# Datos transcritos únicamente desde las etiquetas y hoja aportadas por el usuario.
+# Se evita completar información clínica que no sea claramente visible.
 REQUESTED_CHEMO = [
     {
-        "scheduled_at": datetime(2026, 8, 6, 12, 0),
+        "scheduled_at": datetime(2026, 8, 6, 9, 45),
         "name": "Vincristina",
         "protocol": "Oncológico",
         "cycle": "Ciclo 1",
         "purpose": None,
         "status": "completed",
         "notes": (
-            "Dosis: 0,70 mg. Vía endovenosa por catéter de quimioterapia. Volumen total: 0,70 mL. "
-            "Etiqueta Central de Mezclas Hospital Luis Calvo Mackenna, receta 14925. "
-            "Elaboración: 05-08-2026. Administración confirmada por el usuario: 06-08-2026 a las 12:00. "
+            "Dosis: 0,70 mg. Vía endovenosa (EV). Volumen total: 0,70 mL. "
+            "Hospital Luis Calvo Mackenna · Central de Mezclas · Oncología · receta 14925. "
+            "Fecha de admisión visible: 06-08-2026. Elaboración: 05-08-2026. "
+            "Hora registrada en la hoja de administración: 09:45. "
             f"Origen: {SOURCE_MARKER}."
         ),
         "adverse_effects": "Sin complicaciones registradas en la anotación visible.",
     },
     {
-        "scheduled_at": datetime(2026, 8, 6, 13, 0),
+        "scheduled_at": datetime(2026, 8, 6, 11, 20),
         "name": "Ciclofosfamida",
         "protocol": "Oncológico",
         "cycle": "Ciclo 1",
         "purpose": None,
         "status": "completed",
         "notes": (
-            "Dosis: 780 mg. Vía endovenosa por catéter de quimioterapia. "
-            "Preparación visible: glucosa 5% 100 cc / 61 mL; volumen total 100 mL. "
-            "Etiqueta Central de Mezclas Hospital Luis Calvo Mackenna, receta 14925. "
-            "Elaboración: 05-08-2026. Administración confirmada por el usuario: 06-08-2026 a las 13:00. "
+            "Dosis: 780 mg. Vía endovenosa (EV). Preparación indicada en etiqueta: glucosa al 5%; "
+            "61,00 mL de preparado y volumen total 100 mL. "
+            "Hospital Luis Calvo Mackenna · Central de Mezclas · Oncología · receta 14925. "
+            "Fecha de admisión visible: 06-08-2026. Elaboración: 05-08-2026. "
+            "Administración registrada en la hoja desde 11:20 hasta 13:20. "
             f"Origen: {SOURCE_MARKER}."
         ),
         "adverse_effects": None,
@@ -51,8 +53,8 @@ REQUESTED_CHEMO = [
 def sync_requested_chemo_once(db: Session, user: User) -> None:
     """Sincroniza los dos agentes confirmados del primer ciclo del paciente inicial del admin.
 
-    Si ya se habían creado con una transcripción horaria anterior, se corrigen en lugar de
-    crear duplicados. Solo se modifican registros que contienen SOURCE_MARKER.
+    Si ya se habían creado con una transcripción anterior, se corrigen en lugar de crear
+    duplicados. Solo se modifican registros que contienen SOURCE_MARKER.
     """
     admin_username = os.getenv("ADMIN_USERNAME", "admin").strip().lower()
     if user.username.strip().lower() != admin_username:
