@@ -17,12 +17,14 @@ from .security_headers import SecurityHeadersMiddleware
 from .v2_bootstrap import bootstrap_v2
 from .v2_bugfixes import bugfix_api
 from .v2_extended_features import extended_api
+from .v2_menu_report_hotfix import hotfix_api
 from .v2_record_fixes import record_fix_api
 from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(v2_api)
 app.include_router(v2_public)
+app.include_router(hotfix_api)
 app.include_router(bugfix_api)
 app.include_router(record_fix_api)
 app.include_router(extended_api)
