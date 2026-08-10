@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from .db import get_db
 from .main import app, templates
 from .models import User
+from .requested_chemo import sync_requested_chemo_once
 from .requested_medications import sync_requested_medications_once
 from .security_headers import SecurityHeadersMiddleware
 from .v2_bootstrap import bootstrap_v2
@@ -76,6 +77,7 @@ def v2_home(request: Request, db: DbDep):
 
     bootstrap_v2(db)
     sync_requested_medications_once(db, user)
+    sync_requested_chemo_once(db, user)
     return templates.TemplateResponse(
         request=request,
         name="v2.html",
