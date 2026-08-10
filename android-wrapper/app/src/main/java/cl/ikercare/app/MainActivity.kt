@@ -12,7 +12,6 @@ import android.webkit.CookieManager
 import android.webkit.DownloadListener
 import android.webkit.ServiceWorkerController
 import android.webkit.URLUtil
-import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -108,7 +107,7 @@ class MainActivity : AppCompatActivity() {
             builtInZoomControls = false
             displayZoomControls = false
             allowFileAccess = false
-            allowContentAccess = false
+            allowContentAccess = true
             userAgentString = "$userAgentString IkerCareAndroid/2.0.4"
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -116,12 +115,10 @@ class MainActivity : AppCompatActivity() {
         }
         webView.clearCache(true)
         webView.addJavascriptInterface(NativeBridge(), "IkerCareNative")
-        webView.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                progressBar.progress = newProgress
-                progressBar.visibility = if (newProgress in 1..99) View.VISIBLE else View.GONE
-                if (newProgress == 100) swipeRefresh.isRefreshing = false
-            }
+        webView.webChromeClient = IkerCareWebChromeClient(this) { newProgress ->
+            progressBar.progress = newProgress
+            progressBar.visibility = if (newProgress in 1..99) View.VISIBLE else View.GONE
+            if (newProgress == 100) swipeRefresh.isRefreshing = false
         }
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
