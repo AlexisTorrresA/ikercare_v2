@@ -115,6 +115,7 @@ class MainActivity : AppCompatActivity() {
         }
         webView.clearCache(true)
         webView.addJavascriptInterface(NativeBridge(), "IkerCareNative")
+        webView.addJavascriptInterface(ReportDownloadBridge(this), "IkerCareDownloads")
         webView.webChromeClient = IkerCareWebChromeClient(this) { newProgress ->
             progressBar.progress = newProgress
             progressBar.visibility = if (newProgress in 1..99) View.VISIBLE else View.GONE
@@ -355,6 +356,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         webView.removeJavascriptInterface("IkerCareNative")
+        webView.removeJavascriptInterface("IkerCareDownloads")
         webView.destroy()
         super.onDestroy()
     }
