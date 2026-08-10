@@ -23,9 +23,12 @@ from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
 app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(v2_api)
 app.include_router(v2_public)
+# Las rutas estáticas extendidas (por ejemplo /chemo/all) deben registrarse
+# antes de las rutas dinámicas de corrección (/chemo/{item_id}) para evitar
+# que "all" sea interpretado como un id y termine en un error 422.
+app.include_router(extended_api)
 app.include_router(bugfix_api)
 app.include_router(record_fix_api)
-app.include_router(extended_api)
 
 DbDep = Annotated[Session, Depends(get_db)]
 
