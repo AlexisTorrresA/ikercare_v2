@@ -10,6 +10,7 @@ from .auth import get_current_user, verify_csrf
 from .db import get_db
 from .models import User
 from .v2_models import (
+    CareChemoSession,
     CareCrisisEvent,
     CareDailyNote,
     CareMedication,
@@ -153,6 +154,51 @@ def delete_crisis_record(patient_id: int, item_id: int, db: Session = Depends(ge
     item = _owned_record(db, CareCrisisEvent, patient_id, item_id, "Evento")
     db.delete(item)
     _audit(db, user.id, patient_id, "crisis.deleted", "crisis", item_id)
+    db.commit()
+    return {"ok": True}
+
+
+@bugfix_api.get("/patients/{patient_id}/chemo/{item_id}")
+def get_chemo_record(patient_id: int, item_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> dict:
+    _require_role(db, user.id, patient_id, {"owner", "editor"})
+    item = _owned_record(db, CareChemoSession, patient_id, item_id, "Registro de quimioterapia")
+    return {
+        "id": item.id,
+        "scheduled_at": item.scheduled_at.isoformat(timespec="minutes"),
+        "name": item.name,
+        "protocol": item.protocol,
+        "cycle": item.cycle,
+        "purpose": item.purpose,
+        "status_value": item.status,
+        "notes": item.notes,
+        "adverse_effects": item.adverse_effects,
+    }
+
+
+@bugfix_api.put("/patients/{patient_id}/chemo/{item_id}")
+def update_chemo_record(patient_id: int, item_id: int, payload: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user), _: None = Depends(verify_csrf)) -> dict:
+    _require_role(db, user.id, patient_id, {"owner", "editor"})
+    item = _owned_record(db, CareChemoSession, patient_id, item_id, "Registro de quimioterapia")
+    if "scheduled_at" in payload:
+        item.scheduled_at = _parse_datetime(payload["scheduled_at"])
+    if "name" in payload:
+        item.name = str(payload["name"])[:180]
+    for field in ["protocol", "cycle", "purpose", "notes", "adverse_effects"]:
+        if field in payload:
+            setattr(item, field, payload[field])
+    if "status_value" in payload:
+        item.status = payload["status_value"]
+    _audit(db, user.id, patient_id, "chemo.updated", "chemo", item.id)
+    db.commit()
+    return {"ok": True}
+
+
+@bugfix_api.delete("/patients/{patient_id}/chemo/{item_id}")
+def delete_chemo_record(patient_id: int, item_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user), _: None = Depends(verify_csrf)) -> dict:
+    _require_role(db, user.id, patient_id, {"owner", "editor"})
+    item = _owned_record(db, CareChemoSession, patient_id, item_id, "Registro de quimioterapia")
+    db.delete(item)
+    _audit(db, user.id, patient_id, "chemo.deleted", "chemo", item_id)
     db.commit()
     return {"ok": True}
 
