@@ -351,6 +351,35 @@ class MainActivity : AppCompatActivity() {
                 MedicationReminderScheduler.sync(this@MainActivity, json)
             }
         }
+
+        @android.webkit.JavascriptInterface
+        fun downloadAuthenticatedFile(url: String, fileName: String, mimeType: String) {
+            runOnUiThread {
+                try {
+                    val uri = Uri.parse(url)
+                    val base = Uri.parse(serverUrl)
+                    val sameServer = base.scheme == uri.scheme && base.host == uri.host && effectivePort(base) == effectivePort(uri)
+                    if (!sameServer || !uri.path.orEmpty().startsWith("/api/v2/")) {
+                        Toast.makeText(this@MainActivity, "Descarga no permitida", Toast.LENGTH_LONG).show()
+                        return@runOnUiThread
+                    }
+                    val safeName = fileName.ifBlank { URLUtil.guessFileName(url, null, mimeType) }
+                    val request = DownloadManager.Request(uri).apply {
+                        setMimeType(mimeType.ifBlank { "application/octet-stream" })
+                        addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url))
+                        addRequestHeader("User-Agent", webView.settings.userAgentString)
+                        setTitle(safeName)
+                        setDescription("Descarga segura desde IkerCare")
+                        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, safeName)
+                    }
+                    (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+                    Toast.makeText(this@MainActivity, "Descarga iniciada", Toast.LENGTH_SHORT).show()
+                } catch (_: Exception) {
+                    Toast.makeText(this@MainActivity, "No se pudo iniciar la descarga", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
