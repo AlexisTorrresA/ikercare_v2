@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ikercare-static-v2.0.5';
+const CACHE_NAME = 'ikercare-static-v2.0.6';
 const STATIC_ASSETS = [
   '/static/v2.css',
   '/static/v2.js',
