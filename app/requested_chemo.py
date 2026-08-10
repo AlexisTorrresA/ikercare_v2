@@ -11,35 +11,36 @@ from .v2_models import CareChemoSession, Patient, PatientMember
 
 SOURCE_MARKER = "user_chemo_cycle1_2026_08"
 
-# Transcripción conservadora de las etiquetas y hoja de administración aportadas por el usuario.
-# No se agregan datos que no sean visibles/consistentes en los documentos.
+# Datos confirmados por el usuario a partir de las etiquetas del primer ciclo.
+# Son únicamente dos agentes. La hora y la vía fueron confirmadas explícitamente por el usuario.
 REQUESTED_CHEMO = [
     {
-        "scheduled_at": datetime(2026, 8, 6, 9, 45),
+        "scheduled_at": datetime(2026, 8, 6, 12, 0),
         "name": "Vincristina",
         "protocol": "Oncológico",
         "cycle": "Ciclo 1",
         "purpose": None,
         "status": "completed",
         "notes": (
-            "Dosis: 0,70 mg EV. Volumen total: 0,70 mL. "
+            "Dosis: 0,70 mg. Vía endovenosa por catéter de quimioterapia. Volumen total: 0,70 mL. "
             "Etiqueta Central de Mezclas Hospital Luis Calvo Mackenna, receta 14925. "
-            "Elaboración: 05-08-2026. Hora 09:45 transcrita de la hoja de administración aportada por el usuario. "
+            "Elaboración: 05-08-2026. Administración confirmada por el usuario: 06-08-2026 a las 12:00. "
             f"Origen: {SOURCE_MARKER}."
         ),
         "adverse_effects": "Sin complicaciones registradas en la anotación visible.",
     },
     {
-        "scheduled_at": datetime(2026, 8, 6, 11, 20),
+        "scheduled_at": datetime(2026, 8, 6, 13, 0),
         "name": "Ciclofosfamida",
         "protocol": "Oncológico",
         "cycle": "Ciclo 1",
         "purpose": None,
         "status": "completed",
         "notes": (
-            "Dosis: 780 mg EV. Preparación visible: glucosa 5% 100 cc / 61 mL; volumen total 100 mL. "
+            "Dosis: 780 mg. Vía endovenosa por catéter de quimioterapia. "
+            "Preparación visible: glucosa 5% 100 cc / 61 mL; volumen total 100 mL. "
             "Etiqueta Central de Mezclas Hospital Luis Calvo Mackenna, receta 14925. "
-            "Elaboración: 05-08-2026. Anotación manuscrita visible: 11:20–13:20. "
+            "Elaboración: 05-08-2026. Administración confirmada por el usuario: 06-08-2026 a las 13:00. "
             f"Origen: {SOURCE_MARKER}."
         ),
         "adverse_effects": None,
@@ -48,7 +49,11 @@ REQUESTED_CHEMO = [
 
 
 def sync_requested_chemo_once(db: Session, user: User) -> None:
-    """Agrega una sola vez el primer ciclo confirmado del paciente inicial del admin."""
+    """Sincroniza los dos agentes confirmados del primer ciclo del paciente inicial del admin.
+
+    Si ya se habían creado con una transcripción horaria anterior, se corrigen en lugar de
+    crear duplicados. Solo se modifican registros que contienen SOURCE_MARKER.
+    """
     admin_username = os.getenv("ADMIN_USERNAME", "admin").strip().lower()
     if user.username.strip().lower() != admin_username:
         return
@@ -74,11 +79,31 @@ def sync_requested_chemo_once(db: Session, user: User) -> None:
             select(CareChemoSession).where(
                 CareChemoSession.patient_id == patient.id,
                 CareChemoSession.name == item["name"],
+                CareChemoSession.notes.contains(SOURCE_MARKER),
+            )
+        )
+
+        if existing:
+            existing.scheduled_at = item["scheduled_at"]
+            existing.protocol = item["protocol"]
+            existing.cycle = item["cycle"]
+            existing.purpose = item["purpose"]
+            existing.status = item["status"]
+            existing.notes = item["notes"]
+            existing.adverse_effects = item["adverse_effects"]
+            changed = True
+            continue
+
+        duplicate = db.scalar(
+            select(CareChemoSession).where(
+                CareChemoSession.patient_id == patient.id,
+                CareChemoSession.name == item["name"],
                 CareChemoSession.scheduled_at == item["scheduled_at"],
             )
         )
-        if existing:
+        if duplicate:
             continue
+
         db.add(
             CareChemoSession(
                 patient_id=patient.id,
