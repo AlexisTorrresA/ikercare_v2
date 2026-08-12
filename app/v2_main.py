@@ -20,13 +20,14 @@ from .v2_clinical_history import clinical_history_api
 from .v2_extended_features import extended_api
 from .v2_record_fixes import record_fix_api
 from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
-from .v2_treatment_status_api import status_api
+from .v2_timeline_hotfix import timeline_hotfix_api
 
 app.add_middleware(SecurityHeadersMiddleware)
+# El timeline sin duplicados debe registrarse antes de la ruta histórica anterior.
+app.include_router(timeline_hotfix_api)
 app.include_router(v2_api)
 app.include_router(v2_public)
-# Las rutas históricas reforzadas conservan horarios incluso al pausar/suspender.
-app.include_router(status_api)
+# Las rutas clínicas nuevas se registran antes de rutas dinámicas como /chemo/{item_id}.
 app.include_router(clinical_history_api)
 app.include_router(extended_api)
 app.include_router(bugfix_api)
