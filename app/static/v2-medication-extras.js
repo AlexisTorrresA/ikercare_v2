@@ -165,6 +165,77 @@
     new MutationObserver(syncEditSos).observe(document.body, { childList: true, subtree: true });
   }
 
+  function ensurePermanentDeleteDialog() {
+    let dialog = $("#permanentDeleteMedicationDialog");
+    if (dialog) return dialog;
+    dialog = document.createElement("dialog");
+    dialog.id = "permanentDeleteMedicationDialog";
+    dialog.innerHTML = `
+      <form id="permanentDeleteMedicationForm" class="dialog-form">
+        <div class="dialog-head">
+          <div>
+            <h2>Eliminar medicamento definitivamente</h2>
+            <p class="muted" style="margin:4px 0 0">Esta acción es irreversible.</p>
+          </div>
+          <button type="button" class="icon-btn" data-close-permanent-delete aria-label="Cerrar">×</button>
+        </div>
+        <input type="hidden" name="medication_id">
+        <input type="hidden" name="medication_name">
+        <div class="notice">
+          Se eliminarán el medicamento, sus horarios, administraciones e historial asociado.
+        </div>
+        <label>Para confirmar, escribe exactamente <strong id="permanentDeleteMedicationName"></strong>
+          <input name="confirmation" autocomplete="off" required>
+        </label>
+        <div class="button-row">
+          <button type="button" class="secondary" data-close-permanent-delete>Cancelar</button>
+          <button type="submit" class="danger">Eliminar definitivamente</button>
+        </div>
+      </form>`;
+    document.body.appendChild(dialog);
+    dialog.addEventListener("click", event => {
+      if (event.target === dialog || event.target.closest("[data-close-permanent-delete]")) dialog.close();
+    });
+    $("#permanentDeleteMedicationForm", dialog).addEventListener("submit", submitPermanentDelete);
+    return dialog;
+  }
+
+  function openPermanentDeleteDialog(med) {
+    const dialog = ensurePermanentDeleteDialog();
+    const form = $("#permanentDeleteMedicationForm", dialog);
+    form.reset();
+    form.elements.medication_id.value = String(med.id);
+    form.elements.medication_name.value = med.name;
+    $("#permanentDeleteMedicationName", dialog).textContent = med.name;
+    dialog.showModal();
+    requestAnimationFrame(() => form.elements.confirmation.focus());
+  }
+
+  async function submitPermanentDelete(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const id = Number(form.elements.medication_id.value);
+    const name = form.elements.medication_name.value;
+    const typed = form.elements.confirmation.value;
+    if (typed !== name) {
+      toast("El nombre escrito no coincide con el medicamento.", true);
+      form.elements.confirmation.focus();
+      return;
+    }
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      await api(`/api/v2/patients/${patientId()}/medications/${id}/permanent`, { method: "DELETE" });
+      form.closest("dialog")?.close();
+      toast("Medicamento eliminado definitivamente.");
+      setTimeout(() => location.reload(), 350);
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      submit.disabled = false;
+    }
+  }
+
   async function addPermanentDeleteButtons() {
     const root = $("#configuredMedicationList");
     const pid = patientId();
@@ -188,15 +259,7 @@
       button.className = "danger permanent-delete-med";
       button.dataset.id = String(id);
       button.textContent = "Eliminar definitivamente";
-      button.onclick = async () => {
-        const typed = prompt(`Esto borrará ${med.name}, sus horarios, administraciones e historial. Para confirmar escribe exactamente:\n${med.name}`);
-        if (typed !== med.name) { if (typed !== null) toast("Nombre de confirmación incorrecto.", true); return; }
-        try {
-          await api(`/api/v2/patients/${pid}/medications/${id}/permanent`, { method: "DELETE" });
-          toast("Medicamento eliminado definitivamente.");
-          location.reload();
-        } catch (error) { toast(error.message, true); }
-      };
+      button.onclick = () => openPermanentDeleteDialog(med);
       row.appendChild(button);
     });
   }
@@ -246,6 +309,7 @@
   function init() {
     bindAiFallback();
     setupSos();
+    ensurePermanentDeleteDialog();
     observeMedicationUi();
     setTimeout(addPermanentDeleteButtons, 500);
   }
