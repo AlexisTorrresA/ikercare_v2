@@ -16,6 +16,7 @@ from .requested_medications import sync_requested_medications_once
 from .security_headers import SecurityHeadersMiddleware
 from .v2_bootstrap import bootstrap_v2
 from .v2_bugfixes import bugfix_api
+from .v2_clinical_history import clinical_history_api
 from .v2_extended_features import extended_api
 from .v2_record_fixes import record_fix_api
 from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
@@ -27,6 +28,9 @@ app.include_router(v2_public)
 # antes de las rutas dinámicas de corrección (/chemo/{item_id}) para evitar
 # que "all" sea interpretado como un id y termine en un error 422.
 app.include_router(extended_api)
+# Módulo aditivo: historial de tratamiento, evolución de quimio, exámenes agrupados
+# y reportes por hospitalización. No reemplaza ni elimina datos existentes.
+app.include_router(clinical_history_api)
 app.include_router(bugfix_api)
 app.include_router(record_fix_api)
 
