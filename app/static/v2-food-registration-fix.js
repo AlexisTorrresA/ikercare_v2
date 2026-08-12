@@ -11,6 +11,20 @@
     return Number($("#patientSelect")?.value || 0) || null;
   }
 
+  function field(form, name) {
+    return form.elements.namedItem(name);
+  }
+
+  function value(form, name) {
+    const control = field(form, name);
+    return control && "value" in control ? String(control.value || "").trim() : "";
+  }
+
+  function checked(form, name) {
+    const control = field(form, name);
+    return Boolean(control && "checked" in control && control.checked);
+  }
+
   function toast(message, error = false) {
     const el = $("#toast");
     if (!el) return;
@@ -44,8 +58,8 @@
     return payload;
   }
 
-  function numberOrNull(value) {
-    const text = String(value ?? "").trim();
+  function numberOrNull(raw) {
+    const text = String(raw ?? "").trim();
     if (!text) return null;
     const number = Number(text);
     return Number.isFinite(number) ? number : null;
@@ -63,9 +77,11 @@
       return;
     }
 
-    const item = String(form.elements.item?.value || "").trim();
-    const occurredAt = String(form.elements.occurred_at?.value || "").trim();
-    if (!item || !occurredAt) {
+    // El control se llama "item". En HTMLFormControlsCollection, .item es también
+    // un método nativo, por eso debe obtenerse explícitamente con namedItem().
+    const foodItem = value(form, "item");
+    const occurredAt = value(form, "occurred_at");
+    if (!foodItem || !occurredAt) {
       toast("Completa la fecha, hora y alimento o bebida.", true);
       return;
     }
@@ -73,17 +89,17 @@
     const editId = Number(form.dataset.editId || 0) || null;
     const payload = {
       occurred_at: occurredAt,
-      meal_type: String(form.elements.meal_type?.value || "").trim() || null,
-      item,
-      amount: numberOrNull(form.elements.amount?.value),
-      unit: String(form.elements.unit?.value || "").trim() || null,
-      portion: String(form.elements.portion?.value || "").trim() || null,
-      tolerated: Boolean(form.elements.tolerated?.checked),
-      vomiting: Boolean(form.elements.vomiting?.checked),
-      notes: String(form.elements.notes?.value || "").trim() || null,
+      meal_type: value(form, "meal_type") || null,
+      item: foodItem,
+      amount: numberOrNull(value(form, "amount")),
+      unit: value(form, "unit") || null,
+      portion: value(form, "portion") || null,
+      tolerated: checked(form, "tolerated"),
+      vomiting: checked(form, "vomiting"),
+      notes: value(form, "notes") || null,
     };
 
-    const submit = form.querySelector('button[type="submit"], button.primary:not([value="cancel"])');
+    const submit = form.querySelector('button.primary:not([value="cancel"])');
     if (submit) submit.disabled = true;
 
     try {
@@ -110,8 +126,8 @@
     const current = $("#foodForm");
     if (!current || current.dataset.foodRegistrationFix === "1") return;
 
-    // Reemplazamos únicamente el formulario de comida para retirar listeners
-    // antiguos que quedaron superpuestos tras las mejoras recientes.
+    // Reemplaza solo el formulario de comida para retirar listeners duplicados
+    // que quedaron superpuestos por las mejoras anteriores.
     const fresh = current.cloneNode(true);
     fresh.dataset.foodRegistrationFix = "1";
     current.replaceWith(fresh);
@@ -127,10 +143,11 @@
         bindFoodForm();
         const form = $("#foodForm");
         if (!form || form.dataset.editId) return;
-        if (!form.elements.occurred_at?.value) {
+        const occurredAt = field(form, "occurred_at");
+        if (occurredAt && "value" in occurredAt && !occurredAt.value) {
           const now = new Date();
           const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-          form.elements.occurred_at.value = local.toISOString().slice(0, 16);
+          occurredAt.value = local.toISOString().slice(0, 16);
         }
       }, 0);
     }, true);
