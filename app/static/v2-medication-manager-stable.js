@@ -9,6 +9,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
   let managerLoading = false;
+  let managerLoadedPatientId = null;
   let medications = new Map();
 
   function patientId() {
@@ -70,6 +71,10 @@
       paused: "Pausado",
       resumed: "Reanudado",
     })[value] || value || "Activo";
+  }
+
+  function isSosFrequency(value) {
+    return /\b(sos|rescate|seg[uú]n necesidad|si es necesario)\b/i.test(String(value || ""));
   }
 
   function normalizeHistory(payload) {
@@ -189,17 +194,13 @@
         const times = form.elements.times;
         if (!frequency || !times) return;
         if (sos.checked) {
-          if (!/\b(sos|rescate|seg[uú]n necesidad|si es necesario)\b/i.test(frequency.value || "")) {
-            frequency.dataset.beforeSos = frequency.value || "";
-          }
+          if (!isSosFrequency(frequency.value)) frequency.dataset.beforeSos = frequency.value || "";
           frequency.value = "SOS / según necesidad";
           times.dataset.beforeSos = times.value || "";
           times.value = "";
           times.disabled = true;
         } else {
-          if (/\b(sos|rescate|seg[uú]n necesidad|si es necesario)\b/i.test(frequency.value || "")) {
-            frequency.value = frequency.dataset.beforeSos || "";
-          }
+          if (isSosFrequency(frequency.value)) frequency.value = frequency.dataset.beforeSos || "";
           times.disabled = false;
           if (!times.value && times.dataset.beforeSos) times.value = times.dataset.beforeSos;
         }
@@ -211,7 +212,7 @@
     const root = $("#medTreatmentHistory .history-content");
     if (!root) return;
     root.innerHTML = rows.length ? rows.map(row => `
-      <div class="treatment-history-item">
+      <div class="treatment-history-item" data-history-id="${row.id || ""}" data-event-type="${esc(row.event_type || "")}">
         <time>${esc(new Date(row.occurred_at).toLocaleString("es-CL"))}</time>
         <div><strong>${esc(statusLabel(row.status))}</strong>${row.changed_fields?.length ? ` · cambio: ${esc(row.changed_fields.join(", "))}` : ""}</div>
         <div>${esc([row.dose, row.route, row.frequency, (row.times || []).join(", ")].filter(Boolean).join(" · "))}</div>
@@ -226,13 +227,15 @@
     root.innerHTML = items.length ? items.map(med => {
       const status = med.treatment_status || (med.active === false ? "suspended" : "active");
       const active = med.active !== false;
+      const sos = isSosFrequency(med.frequency);
       return `
-        <article class="card" style="margin-bottom:10px">
+        <article class="card" data-medication-id="${med.id}" data-is-sos="${sos ? "1" : "0"}" style="margin-bottom:10px">
           <div class="card-head">
             <div>
               <strong>${esc(med.name)}</strong>
               <div class="muted">${esc([med.dose, med.route, med.frequency].filter(Boolean).join(" · "))}</div>
               <span class="badge">${esc(statusLabel(status))}</span>
+              ${sos ? `<span class="badge sos-med-badge">SOS</span>` : ""}
             </div>
           </div>
           <div class="button-row">
@@ -252,6 +255,12 @@
     const root = $("#configuredMedicationList");
     const button = $("#manageMedicationsBtn");
 
+    if (managerLoadedPatientId === pid) {
+      renderManager([...medications.values()]);
+      if (manager && !manager.open) manager.showModal();
+      return;
+    }
+
     managerLoading = true;
     if (button) button.disabled = true;
     if (root) root.innerHTML = `<p class="empty">Cargando…</p>`;
@@ -260,6 +269,7 @@
     try {
       const items = await api(`/api/v2/patients/${pid}/medications`);
       medications = new Map(items.map(item => [Number(item.id), item]));
+      managerLoadedPatientId = pid;
       renderManager(items);
     } catch (error) {
       if (root) root.innerHTML = `<p class="empty">${esc(error.message)}</p>`;
@@ -275,9 +285,10 @@
     ensureDialogs();
 
     let medication = medications.get(Number(medicationId));
-    if (!medication) {
+    if (!medication || managerLoadedPatientId !== pid) {
       const items = await api(`/api/v2/patients/${pid}/medications`);
       medications = new Map(items.map(item => [Number(item.id), item]));
+      managerLoadedPatientId = pid;
       medication = medications.get(Number(medicationId));
     }
     if (!medication) return toast("Medicamento no encontrado.", true);
@@ -295,8 +306,6 @@
       ]);
       const historyData = normalizeHistory(historyPayload);
 
-      // Otro módulo puede clonar el formulario una vez al crearse. Se vuelve a tomar
-      // la referencia actual antes de rellenarlo para evitar escribir en un nodo antiguo.
       const form = $("#medicationEditForm");
       ensureEditExtras(form);
       form.reset();
@@ -394,11 +403,23 @@
         });
       }
 
+      const previous = medications.get(medicationId) || {};
+      medications.set(medicationId, {
+        ...previous,
+        ...payload,
+        id: medicationId,
+        times,
+        treatment_status: nextStatus,
+        active: ["active", "resumed"].includes(nextStatus),
+      });
+      managerLoadedPatientId = pid;
+      form.dataset.previousStatus = nextStatus;
+      form.dataset.previousSos = isSos ? "1" : "0";
+
       $("#medicationEditDialog")?.close();
       toast("Medicamento actualizado.");
       const date = $("#selectedDate");
       date?.dispatchEvent(new Event("change", { bubbles: true }));
-      medications.clear();
     } catch (error) {
       toast(error.message, true);
     } finally {
@@ -417,8 +438,9 @@
     try {
       await api(`/api/v2/patients/${pid}/medications/${medicationId}`, { method: "DELETE" });
       toast("Medicamento retirado del esquema activo.");
-      medications.clear();
-      await loadManager();
+      medications.delete(medicationId);
+      managerLoadedPatientId = pid;
+      renderManager([...medications.values()]);
       const date = $("#selectedDate");
       date?.dispatchEvent(new Event("change", { bubbles: true }));
     } catch (error) {
@@ -471,4 +493,11 @@
     if (event.target?.id !== "medicationEditForm") return;
     saveEdit(event);
   }, true);
+
+  $("#patientSelect")?.addEventListener("change", () => {
+    medications.clear();
+    managerLoadedPatientId = null;
+    $("#medicationManagerDialog")?.close();
+    $("#medicationEditDialog")?.close();
+  });
 })();
