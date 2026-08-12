@@ -60,7 +60,8 @@ def extract_text(data: bytes, mime_type: str) -> tuple[str, str, str | None]:
             text = _ocr_image(data)
             return text.strip(), "ocr_completed" if text.strip() else "no_text_detected", None
     except Exception as exc:  # El archivo se conserva aunque falle la extracción.
-        return "", "extraction_failed", str(exc)[:500]
+        # Mantiene un estado público simple/estable; el detalle técnico queda en extraction_error/logs.
+        return "", "failed", str(exc)[:500]
 
     return "", "unsupported", "Tipo de archivo no soportado para extracción."
 
