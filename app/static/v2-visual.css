@@ -72,5 +72,37 @@ body { background: radial-gradient(circle at 100% 0, rgba(53,105,220,.11), trans
 .visual-med-actions { display:flex; justify-content:stretch; margin-top:12px; }
 .visual-med-actions .skip-btn { width:100%; min-height:44px!important; border:1px solid #d7dfeb!important; border-radius:14px!important; background:#fff!important; color:#657086!important; font-weight:750!important; }
 .visual-med-card.skipped .visual-med-actions .skip-btn { border-color:#e8bd7d!important; background:#fffaf2!important; color:#a66614!important; }
-@media (max-width:680px) { main{padding-left:10px;padding-right:10px;} .visual-summary-card{padding:16px;} .visual-summary-head{align-items:flex-start;} .visual-summary-head h2{font-size:23px;} .visual-progress{flex-basis:78px;width:78px;height:78px;border-radius:22px;} .visual-progress>div{border-radius:17px;} .visual-metrics-grid{display:flex;gap:9px;overflow-x:auto;padding:1px 0 3px;scroll-snap-type:x proximity;scrollbar-width:none;} .visual-metrics-grid::-webkit-scrollbar{display:none;} .visual-metric{flex:0 0 126px;scroll-snap-align:start;} .med-row.visual-med-card{grid-template-columns:76px minmax(0,1fr)!important;} .visual-time-rail span{font-size:17px;} .visual-med-content{padding:15px 12px 13px;} .visual-med-copy h3{font-size:18px;} .visual-med-top{gap:8px;} .visual-check-slot .check-btn{width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;} }
-@media (max-width:390px) { .topbar{grid-template-columns:minmax(0,1fr) minmax(112px,38%);} .topbar>div:first-child{padding-left:50px;} .topbar>div:first-child::before{width:42px;height:42px;border-radius:14px;} .visual-summary-head{display:grid;grid-template-columns:1fr auto;} .visual-summary-head p{font-size:13px;} .med-row.visual-med-card{grid-template-columns:70px minmax(0,1fr)!important;} .visual-med-pill{font-size:11px;padding:5px 9px;} }
+
+/* SOS medications: same card hierarchy as scheduled medications, with salmon/red emphasis. */
+.sos-medication-section { padding:0!important; border:0!important; background:transparent!important; box-shadow:none!important; overflow:visible!important; }
+.sos-section-head { margin:22px 2px 12px!important; padding:0 2px!important; }
+.sos-section-head h2 { margin:0; color:#a63b35; font-size:18px; letter-spacing:.03em; }
+.sos-section-head p { margin:4px 0 0!important; color:#7d6a68; font-size:13px; }
+.sos-medication-list { display:grid; gap:14px; }
+.sos-med-card { display:grid; grid-template-columns:76px minmax(0,1fr); overflow:hidden; border:1px solid #f0b5ad; border-radius:25px; background:#fff; box-shadow:0 10px 23px rgba(157,67,57,.09); }
+.sos-accent-rail { display:flex; align-items:center; justify-content:center; min-height:100%; padding:18px 8px; background:linear-gradient(180deg,#ef8b7d 0%,#d95e52 100%); }
+.sos-accent-rail span { color:#fff; font-size:15px; font-weight:900; letter-spacing:.08em; text-shadow:0 1px 2px rgba(104,35,29,.16); }
+.sos-med-content { min-width:0; padding:16px 14px 14px; }
+.sos-med-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.sos-med-copy { min-width:0; flex:1 1 auto; }
+.sos-med-copy h3 { margin:0 0 9px; color:#4d2724; font-size:20px; line-height:1.15; letter-spacing:-.2px; overflow-wrap:anywhere; }
+.sos-med-pills { display:flex; flex-wrap:wrap; gap:7px; }
+.sos-pill { display:inline-flex; align-items:center; min-height:31px; max-width:100%; padding:6px 11px; border-radius:999px; background:#f7f1f0; color:#735d5a; font-size:12px; font-weight:750; line-height:1.25; }
+.sos-pill.sos-label { background:#ffe5e1; color:#a64138; }
+.sos-pill.dose { background:#f6f2f1; color:#705f5c; }
+.sos-pill.route { background:#f7f4f3; color:#735f5c; }
+.sos-state { flex:0 0 auto; display:inline-flex; align-items:center; min-height:28px; padding:5px 9px; border-radius:999px; white-space:nowrap; font-size:11px; font-weight:850; }
+.sos-state.unused { background:#fff1ef; color:#a94a41; }
+.sos-state.used { background:#e8f8ef; color:#167d4c; }
+.sos-purpose { margin:11px 0 0; color:#4f403e; font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
+.sos-purpose strong { color:#4b2926; }
+.sos-uses { display:grid; gap:6px; margin-top:10px; }
+.sos-empty-use { color:#8c7471; font-size:13px; font-weight:650; }
+.sos-use-entry { display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; border-radius:12px; background:#fff4f2; color:#7d4c47; font-size:12px; line-height:1.4; }
+.sos-use-entry strong { color:#9a3f37; }
+.sos-use-entry span { min-width:0; overflow-wrap:anywhere; }
+.register-sos-use { width:100%; min-height:44px; margin-top:12px; border:1px solid #efb2aa!important; border-radius:14px!important; background:#ffe9e5!important; color:#9c3f37!important; font-weight:800!important; }
+.register-sos-use:active { transform:translateY(1px); }
+
+@media (max-width:680px) { main{padding-left:10px;padding-right:10px;} .visual-summary-card{padding:16px;} .visual-summary-head{align-items:flex-start;} .visual-summary-head h2{font-size:23px;} .visual-progress{flex-basis:78px;width:78px;height:78px;border-radius:22px;} .visual-progress>div{border-radius:17px;} .visual-metrics-grid{display:flex;gap:9px;overflow-x:auto;padding:1px 0 3px;scroll-snap-type:x proximity;scrollbar-width:none;} .visual-metrics-grid::-webkit-scrollbar{display:none;} .visual-metric{flex:0 0 126px;scroll-snap-align:start;} .med-row.visual-med-card{grid-template-columns:76px minmax(0,1fr)!important;} .visual-time-rail span{font-size:17px;} .visual-med-content{padding:15px 12px 13px;} .visual-med-copy h3{font-size:18px;} .visual-med-top{gap:8px;} .visual-check-slot .check-btn{width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;} .sos-med-card{grid-template-columns:68px minmax(0,1fr);} .sos-med-content{padding:15px 12px 13px;} .sos-med-copy h3{font-size:18px;} .sos-med-top{display:block;} .sos-state{margin-top:10px;} }
+@media (max-width:390px) { .topbar{grid-template-columns:minmax(0,1fr) minmax(112px,38%);} .topbar>div:first-child{padding-left:50px;} .topbar>div:first-child::before{width:42px;height:42px;border-radius:14px;} .visual-summary-head{display:grid;grid-template-columns:1fr auto;} .visual-summary-head p{font-size:13px;} .med-row.visual-med-card{grid-template-columns:70px minmax(0,1fr)!important;} .visual-med-pill{font-size:11px;padding:5px 9px;} .sos-med-card{grid-template-columns:62px minmax(0,1fr);} .sos-pill{font-size:11px;padding:5px 9px;} }
