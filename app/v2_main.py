@@ -16,6 +16,7 @@ from .requested_medications import sync_requested_medications_once
 from .security_headers import SecurityHeadersMiddleware
 from .v2_bootstrap import bootstrap_v2
 from .v2_bugfixes import bugfix_api
+from .v2_clinical_history import clinical_history_api
 from .v2_extended_features import extended_api
 from .v2_record_fixes import record_fix_api
 from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
@@ -23,9 +24,8 @@ from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
 app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(v2_api)
 app.include_router(v2_public)
-# Las rutas estáticas extendidas (por ejemplo /chemo/all) deben registrarse
-# antes de las rutas dinámicas de corrección (/chemo/{item_id}) para evitar
-# que "all" sea interpretado como un id y termine en un error 422.
+# Rutas estáticas y nuevas antes de las rutas dinámicas /{item_id}.
+app.include_router(clinical_history_api)
 app.include_router(extended_api)
 app.include_router(bugfix_api)
 app.include_router(record_fix_api)
@@ -35,29 +35,27 @@ DbDep = Annotated[Session, Depends(get_db)]
 
 @app.exception_handler(RequestValidationError)
 async def friendly_registration_validation(request: Request, exc: RequestValidationError):
-    if request.url.path == "/api/v2/auth/register":
-        labels = {
-            "username": "usuario",
-            "email": "correo",
-            "display_name": "nombre",
-            "password": "contraseña",
-            "accept_privacy": "aceptación de privacidad",
-            "guardian_attestation": "declaración de autorización",
-        }
-        messages: list[str] = []
-        for error in exc.errors():
-            field = str(error.get("loc", [""])[-1])
-            message = str(error.get("msg", "Datos inválidos."))
-            if message.startswith("Value error, "):
-                message = message.removeprefix("Value error, ")
-            elif message == "Field required":
-                message = f"Falta completar {labels.get(field, field)}."
-            elif "at least" in message.lower() and field == "password":
-                message = "La contraseña debe tener al menos 12 caracteres, letras y números."
-            messages.append(message)
-        detail = messages[0] if messages else "Revisa los datos ingresados e inténtalo nuevamente."
-        return JSONResponse(status_code=422, content={"detail": detail})
-
+    labels = {
+        "username": "usuario",
+        "email": "correo",
+        "display_name": "nombre",
+        "password": "contraseña",
+        "accept_privacy": "aceptación de privacidad",
+        "guardian_attestation": "declaración de autorización",
+    }
+    messages: list[str] = []
+    for error in exc.errors():
+        field = str(error.get("loc", [""])[-1])
+        message = str(error.get("msg", "Datos inválidos."))
+        if message.startswith("Value error, "):
+            message = message.removeprefix("Value error, ")
+        elif message == "Field required":
+            message = f"Falta completar {labels.get(field, field)}."
+        elif "at least" in message.lower() and field == "password":
+            message = "La contraseña debe tener al menos 12 caracteres, letras y números."
+        messages.append(message)
+    if request.url.path.startswith("/api/v2/"):
+        return JSONResponse(status_code=422, content={"detail": messages[0] if messages else "Revisa los datos ingresados."})
     return JSONResponse(status_code=422, content=jsonable_encoder({"detail": exc.errors()}))
 
 
