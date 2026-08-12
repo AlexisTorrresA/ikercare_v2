@@ -25,12 +25,14 @@ from .v2_medication_list_compat import medication_list_compat_api
 from .v2_record_fixes import record_fix_api
 from .v2_report_cache import report_cache_api
 from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
+from .v2_sos_today import sos_today_api
 
 app.add_middleware(SecurityHeadersMiddleware)
 # Rutas específicas/compatibles primero para evitar colisiones con rutas heredadas.
 app.include_router(report_cache_api)
 app.include_router(clinical_hotfix_api)
 app.include_router(medication_extra_api)
+app.include_router(sos_today_api)
 app.include_router(medication_list_compat_api)
 app.include_router(clinical_compat_api)
 app.include_router(v2_api)
