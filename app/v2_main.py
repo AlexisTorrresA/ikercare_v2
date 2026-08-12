@@ -20,6 +20,7 @@ from .v2_clinical_compat import clinical_compat_api
 from .v2_clinical_history import clinical_history_api
 from .v2_clinical_hotfix import clinical_hotfix_api
 from .v2_extended_features import extended_api
+from .v2_medication_extras import medication_extra_api
 from .v2_medication_list_compat import medication_list_compat_api
 from .v2_record_fixes import record_fix_api
 from .v2_report_cache import report_cache_api
@@ -29,6 +30,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Rutas específicas/compatibles primero para evitar colisiones con rutas heredadas.
 app.include_router(report_cache_api)
 app.include_router(clinical_hotfix_api)
+app.include_router(medication_extra_api)
 app.include_router(medication_list_compat_api)
 app.include_router(clinical_compat_api)
 app.include_router(v2_api)

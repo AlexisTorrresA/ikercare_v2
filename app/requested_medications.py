@@ -125,7 +125,8 @@ def sync_requested_medications_once(db: Session, user: User) -> None:
     """Sincroniza una sola vez las capturas con el paciente inicial del admin.
 
     Después de marcar el medicamento con SOURCE_MARKER no se vuelve a sobrescribir,
-    para que futuras ediciones manuales del usuario siempre prevalezcan.
+    para que futuras ediciones manuales del usuario siempre prevalezcan. Si el usuario
+    lo elimina definitivamente, una marca evita que esta sincronización lo recree.
     """
     admin_username = os.getenv("ADMIN_USERNAME", "admin").strip().lower()
     if user.username.strip().lower() != admin_username:
@@ -145,6 +146,20 @@ def sync_requested_medications_once(db: Session, user: User) -> None:
         (patient for patient, _ in owned if patient.name.strip().lower() == child_name),
         owned[0][0],
     )
+
+    # Import local para no introducir dependencia circular durante el arranque.
+    from .v2_clinical_history import CareRecordMeta
+
+    deleted_keys = set(
+        db.scalars(
+            select(CareRecordMeta.key).where(
+                CareRecordMeta.entity_type == "deleted_seed_medication",
+                CareRecordMeta.entity_id == patient.id,
+                CareRecordMeta.value == "1",
+            )
+        ).all()
+    )
+
     medications = db.scalars(
         select(CareMedication).where(CareMedication.patient_id == patient.id)
     ).all()
@@ -153,8 +168,11 @@ def sync_requested_medications_once(db: Session, user: User) -> None:
 
     for item in REQUESTED_MEDICATIONS:
         key = item["name"].strip().casefold()
-        med = by_name.get(key)
+        tombstone_key = " ".join(key.split())[:80]
+        if tombstone_key in deleted_keys:
+            continue
 
+        med = by_name.get(key)
         if med is not None and med.source == SOURCE_MARKER:
             continue
 
