@@ -25,9 +25,9 @@ from .v2_treatment_status_api import status_api
 app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(v2_api)
 app.include_router(v2_public)
-# Rutas estáticas y nuevas antes de las rutas dinámicas /{item_id}.
-app.include_router(clinical_history_api)
+# Las rutas históricas reforzadas conservan horarios incluso al pausar/suspender.
 app.include_router(status_api)
+app.include_router(clinical_history_api)
 app.include_router(extended_api)
 app.include_router(bugfix_api)
 app.include_router(record_fix_api)
