@@ -26,6 +26,6 @@
     .then(() => loadScript("/static/v2-clinical-history.js?v=2.2.2"))
     .then(() => loadScript("/static/v2-clinical-preserve.js?v=2.2.2"))
     .then(() => loadScript("/static/v2-report-download-fix.js?v=2.2.2"))
-    .then(() => loadScript("/static/v2-visible-care-fixes.js?v=2.2.2"))
+    .then(() => loadScript("/static/v2-visible-care-fix.js?v=2.2.2"))
     .catch(error => console.error("No se pudo cargar IkerCare 2", error));
 })();
