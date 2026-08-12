@@ -18,14 +18,19 @@ from .v2_bootstrap import bootstrap_v2
 from .v2_bugfixes import bugfix_api
 from .v2_clinical_history import clinical_history_api
 from .v2_extended_features import extended_api
+from .v2_hospital_report import hospital_report_api
 from .v2_record_fixes import record_fix_api
 from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
+from .v2_timeline_hotfix import timeline_hotfix_api
 
 app.add_middleware(SecurityHeadersMiddleware)
+# El timeline corregido debe registrarse antes de la ruta histórica anterior.
+app.include_router(timeline_hotfix_api)
 app.include_router(v2_api)
 app.include_router(v2_public)
 # Rutas estáticas y nuevas antes de las rutas dinámicas /{item_id}.
 app.include_router(clinical_history_api)
+app.include_router(hospital_report_api)
 app.include_router(extended_api)
 app.include_router(bugfix_api)
 app.include_router(record_fix_api)
