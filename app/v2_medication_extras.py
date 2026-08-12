@@ -56,6 +56,26 @@ def _serialize_sos(med: CareMedication) -> dict:
     }
 
 
+def _sos_event(
+    db: Session,
+    patient_id: int,
+    medication_id: int,
+    event_id: int,
+) -> tuple[CareMedication, CareMedicationEvent]:
+    med = _medication(db, patient_id, medication_id)
+    if not _is_sos(db, med):
+        raise HTTPException(status_code=400, detail="Este medicamento no está marcado como SOS.")
+    event = db.scalar(
+        select(CareMedicationEvent).where(
+            CareMedicationEvent.id == event_id,
+            CareMedicationEvent.medication_id == medication_id,
+        )
+    )
+    if not event:
+        raise HTTPException(status_code=404, detail="Registro SOS no encontrado.")
+    return med, event
+
+
 @medication_extra_api.post("/patients/{patient_id}/medications-with-options", status_code=201)
 def create_medication_with_options(patient_id: int, payload: dict = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user), _: None = Depends(verify_csrf)) -> dict:
     """Crea un medicamento normal o SOS sin inventar dosis ni indicaciones."""
@@ -140,7 +160,38 @@ def register_sos_use(patient_id: int, medication_id: int, payload: dict = Body(d
     db.flush()
     _audit(db, user.id, patient_id, "medication.sos_used", "medication_event", event.id, {"medication": med.name})
     db.commit()
-    return {"id": event.id, "occurred_at": occurred_at.isoformat(timespec="minutes")}
+    return {"id": event.id, "occurred_at": occurred_at.isoformat(timespec="minutes"), "notes": event.notes}
+
+
+@medication_extra_api.put("/patients/{patient_id}/medications/{medication_id}/sos-use/{event_id}")
+def update_sos_use(patient_id: int, medication_id: int, event_id: int, payload: dict = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user), _: None = Depends(verify_csrf)) -> dict:
+    _require_role(db, user.id, patient_id, {"owner", "editor"})
+    med, event = _sos_event(db, patient_id, medication_id, event_id)
+    if payload.get("occurred_at"):
+        event.occurred_at = datetime.fromisoformat(str(payload["occurred_at"]))
+    if "notes" in payload:
+        event.notes = str(payload.get("notes") or "").strip() or "Administración SOS registrada"
+    _audit(db, user.id, patient_id, "medication.sos_use_updated", "medication_event", event.id, {"medication": med.name})
+    db.commit()
+    return {"id": event.id, "occurred_at": event.occurred_at.isoformat(timespec="minutes"), "notes": event.notes}
+
+
+@medication_extra_api.delete("/patients/{patient_id}/medications/{medication_id}/sos-use/{event_id}")
+def delete_sos_use(patient_id: int, medication_id: int, event_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user), _: None = Depends(verify_csrf)) -> dict:
+    _require_role(db, user.id, patient_id, {"owner", "editor"})
+    med, event = _sos_event(db, patient_id, medication_id, event_id)
+    _audit(
+        db,
+        user.id,
+        patient_id,
+        "medication.sos_use_deleted",
+        "medication_event",
+        event.id,
+        {"medication": med.name, "occurred_at": event.occurred_at.isoformat(timespec="minutes")},
+    )
+    db.delete(event)
+    db.commit()
+    return {"ok": True, "deleted": True}
 
 
 @medication_extra_api.delete("/patients/{patient_id}/medications/{medication_id}/permanent")
