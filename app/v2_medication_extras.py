@@ -40,31 +40,21 @@ def permanently_delete_medication(
     med = _medication(db, patient_id, medication_id)
     name = med.name
 
-    # Si venía de las capturas iniciales, deja solo una marca técnica para que
-    # el sincronizador no vuelva a crear el medicamento después de eliminarlo.
     if med.source == SOURCE_MARKER:
-        key = "seed_deleted:" + name.strip().casefold()[:60]
+        key = " ".join(name.strip().casefold().split())[:80]
         tombstone = db.scalar(
             select(CareRecordMeta).where(
-                CareRecordMeta.entity_type == "patient",
+                CareRecordMeta.entity_type == "deleted_seed_medication",
                 CareRecordMeta.entity_id == patient_id,
                 CareRecordMeta.key == key,
             )
         )
         if not tombstone:
-            db.add(CareRecordMeta(entity_type="patient", entity_id=patient_id, key=key, value="1"))
+            db.add(CareRecordMeta(entity_type="deleted_seed_medication", entity_id=patient_id, key=key, value="1"))
         else:
             tombstone.value = "1"
 
-    _audit(
-        db,
-        user.id,
-        patient_id,
-        "medication.permanently_deleted",
-        "medication",
-        medication_id,
-        {"name": name},
-    )
+    _audit(db, user.id, patient_id, "medication.permanently_deleted", "medication", medication_id, {"name": name})
     db.delete(med)
     db.commit()
     return {"ok": True, "deleted": True}
@@ -91,15 +81,7 @@ def delete_treatment_history_item(
         raise HTTPException(status_code=404, detail="Registro de historial no encontrado.")
     if row.event_type == "initial":
         raise HTTPException(status_code=400, detail="El registro inicial se conserva mientras exista el medicamento.")
-    _audit(
-        db,
-        user.id,
-        patient_id,
-        "medication.history_item_deleted",
-        "medication_history",
-        history_id,
-        {"medication_id": medication_id},
-    )
+    _audit(db, user.id, patient_id, "medication.history_item_deleted", "medication_history", history_id, {"medication_id": medication_id})
     db.delete(row)
     db.commit()
     return {"ok": True}
