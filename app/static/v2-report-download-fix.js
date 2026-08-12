@@ -36,8 +36,13 @@
   function reportUrl() {
     const id = patientId();
     if (!id) return null;
+    const payload = reportPayload();
+    if (payload.scope === "hospitalization" && payload.hospitalization_id) {
+      const query = new URLSearchParams({ use_ai: String(payload.use_ai) });
+      return `/api/v2/patients/${id}/hospitalizations/${payload.hospitalization_id}/hospital-report.pdf?${query.toString()}`;
+    }
     const query = new URLSearchParams();
-    Object.entries(reportPayload()).forEach(([key, value]) => {
+    Object.entries(payload).forEach(([key, value]) => {
       if (value !== null && value !== "") query.set(key, String(value));
     });
     return `/api/v2/patients/${id}/reports/pdf?${query.toString()}`;
