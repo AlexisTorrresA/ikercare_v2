@@ -17,6 +17,7 @@ from .security_headers import SecurityHeadersMiddleware
 from .v2_bootstrap import bootstrap_v2
 from .v2_bugfixes import bugfix_api
 from .v2_chemo_event_actions import chemo_event_action_api
+from .v2_chemo_report import chemo_report_api
 from .v2_clinical_compat import clinical_compat_api
 from .v2_clinical_history import clinical_history_api
 from .v2_clinical_hotfix import clinical_hotfix_api
@@ -37,6 +38,7 @@ app.include_router(sos_today_api)
 app.include_router(medication_list_compat_api)
 app.include_router(clinical_compat_api)
 app.include_router(chemo_event_action_api)
+app.include_router(chemo_report_api)
 app.include_router(v2_api)
 app.include_router(v2_public)
 app.include_router(clinical_history_api)
