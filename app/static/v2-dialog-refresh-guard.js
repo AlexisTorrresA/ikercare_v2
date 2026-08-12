@@ -1,15 +1,47 @@
 (() => {
   "use strict";
 
-  function notifyNative() {
+  let medicationRefreshCooldownUntil = 0;
+  let cooldownTimer = null;
+
+  function isMedicationDialog(dialog) {
+    return dialog instanceof HTMLDialogElement && [
+      "medicationManagerDialog",
+      "medicationEditDialog",
+      "permanentDeleteMedicationDialog",
+    ].includes(dialog.id);
+  }
+
+  function nativeSwipeEnabled() {
     const hasOpenDialog = Boolean(document.querySelector("dialog[open]"));
+    const inMedicationCooldown = Date.now() < medicationRefreshCooldownUntil;
+    return !hasOpenDialog && !inMedicationCooldown;
+  }
+
+  function notifyNative() {
     if (window.IkerCareNative?.setSwipeRefreshEnabled) {
-      window.IkerCareNative.setSwipeRefreshEnabled(!hasOpenDialog);
+      window.IkerCareNative.setSwipeRefreshEnabled(nativeSwipeEnabled());
     }
   }
 
+  function startMedicationCooldown() {
+    medicationRefreshCooldownUntil = Date.now() + 1600;
+    clearTimeout(cooldownTimer);
+    notifyNative();
+    cooldownTimer = setTimeout(() => {
+      medicationRefreshCooldownUntil = 0;
+      notifyNative();
+    }, 1650);
+  }
+
   const dialogObserver = new MutationObserver(mutations => {
-    if (mutations.some(mutation => mutation.type === "attributes" && mutation.attributeName === "open")) {
+    for (const mutation of mutations) {
+      if (mutation.type !== "attributes" || mutation.attributeName !== "open") continue;
+      const dialog = mutation.target;
+      if (isMedicationDialog(dialog) && !dialog.open) {
+        startMedicationCooldown();
+        continue;
+      }
       notifyNative();
     }
   });
@@ -18,8 +50,14 @@
     if (!(dialog instanceof HTMLDialogElement) || dialog.dataset.refreshGuardBound === "true") return;
     dialog.dataset.refreshGuardBound = "true";
     dialogObserver.observe(dialog, { attributes: true, attributeFilter: ["open"] });
-    dialog.addEventListener("close", notifyNative);
-    dialog.addEventListener("cancel", notifyNative);
+    dialog.addEventListener("close", () => {
+      if (isMedicationDialog(dialog)) startMedicationCooldown();
+      else notifyNative();
+    });
+    dialog.addEventListener("cancel", () => {
+      if (isMedicationDialog(dialog)) startMedicationCooldown();
+      else notifyNative();
+    });
   }
 
   function bindDialogs(root = document) {
