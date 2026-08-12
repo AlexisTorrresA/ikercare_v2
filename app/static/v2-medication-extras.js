@@ -236,46 +236,41 @@
     }
   }
 
-  async function addPermanentDeleteButtons() {
+  function addPermanentDeleteButtons() {
+    const manager = $("#medicationManagerDialog");
     const root = $("#configuredMedicationList");
-    const pid = patientId();
-    if (!root || !pid) return;
-    let meds;
-    try { meds = await api(`/api/v2/patients/${pid}/medications`); } catch (_) { return; }
-    const byId = new Map(meds.map(m => [Number(m.id), m]));
+    if (!manager?.open || !root) return;
+
     $$(".ext-edit-med,.edit-managed-med", root).forEach(edit => {
-      const id = Number(edit.dataset.id);
-      const med = byId.get(id);
+      const id = Number(edit.dataset.id || 0);
+      const article = edit.closest("article");
       const row = edit.closest(".button-row");
-      if (!med || !row || row.querySelector(`.permanent-delete-med[data-id="${id}"]`)) return;
-      if (isSosFrequency(med.frequency) && !edit.closest("article")?.querySelector(".sos-med-badge")) {
-        const badge = document.createElement("span");
-        badge.className = "badge sos-med-badge";
-        badge.textContent = "SOS";
-        edit.closest("article")?.querySelector(".card-head > div")?.appendChild(badge);
-      }
+      if (!id || !article || !row || row.querySelector(`.permanent-delete-med[data-id="${id}"]`)) return;
+
+      const name = article.querySelector(".card-head strong")?.textContent?.trim() || "Medicamento";
       const button = document.createElement("button");
       button.type = "button";
       button.className = "danger permanent-delete-med";
       button.dataset.id = String(id);
       button.textContent = "Eliminar definitivamente";
-      button.onclick = () => openPermanentDeleteDialog(med);
+      button.onclick = () => openPermanentDeleteDialog({ id, name });
       row.appendChild(button);
     });
   }
 
-  async function addHistoryDeleteButtons() {
+  function addHistoryDeleteButtons() {
+    const dialog = $("#medicationEditDialog");
     const form = $("#medicationEditForm");
     const root = $("#medTreatmentHistory .history-content");
     const pid = patientId();
     const medId = Number(form?.elements.id?.value || 0);
-    if (!root || !pid || !medId) return;
-    let rows;
-    try { rows = await api(`/api/v2/patients/${pid}/medications/${medId}/treatment-history`); } catch (_) { return; }
-    const rendered = $$(".treatment-history-item", root);
-    rendered.forEach((element, index) => {
-      const item = rows[index];
-      if (!item || item.event_type === "initial" || element.querySelector(".delete-history-item")) return;
+    if (!dialog?.open || !root || !pid || !medId) return;
+
+    $$(".treatment-history-item", root).forEach(element => {
+      const historyId = Number(element.dataset.historyId || 0);
+      const eventType = element.dataset.eventType || "";
+      if (!historyId || eventType === "initial" || element.querySelector(".delete-history-item")) return;
+
       const button = document.createElement("button");
       button.type = "button";
       button.className = "text-btn danger-text delete-history-item";
@@ -283,7 +278,7 @@
       button.onclick = async () => {
         if (!confirm("¿Eliminar este cambio del historial? Úsalo solo si fue registrado por error.")) return;
         try {
-          await api(`/api/v2/patients/${pid}/medications/${medId}/treatment-history/${item.id}`, { method: "DELETE" });
+          await api(`/api/v2/patients/${pid}/medications/${medId}/treatment-history/${historyId}`, { method: "DELETE" });
           element.remove();
           toast("Registro del historial eliminado.");
         } catch (error) { toast(error.message, true); }
@@ -293,16 +288,26 @@
   }
 
   function observeMedicationUi() {
-    const observer = new MutationObserver(() => {
-      setTimeout(addPermanentDeleteButtons, 80);
-      setTimeout(addHistoryDeleteButtons, 100);
+    let scheduled = false;
+    const refreshVisibleMedicationUi = () => {
+      scheduled = false;
       bindAiFallback();
       syncEditSos();
+      addPermanentDeleteButtons();
+      addHistoryDeleteButtons();
+    };
+
+    const observer = new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+      setTimeout(refreshVisibleMedicationUi, 60);
     });
     observer.observe(document.body, { childList: true, subtree: true });
+
     document.addEventListener("click", event => {
-      if (event.target.closest("#manageMedicationsBtn")) setTimeout(addPermanentDeleteButtons, 350);
-      if (event.target.closest(".ext-edit-med,.edit-managed-med")) setTimeout(addHistoryDeleteButtons, 250);
+      if (event.target.closest("#manageMedicationsBtn,.ext-edit-med,.edit-managed-med")) {
+        setTimeout(refreshVisibleMedicationUi, 220);
+      }
     });
   }
 
@@ -311,7 +316,6 @@
     setupSos();
     ensurePermanentDeleteDialog();
     observeMedicationUi();
-    setTimeout(addPermanentDeleteButtons, 500);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
