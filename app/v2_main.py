@@ -18,14 +18,16 @@ from .v2_bootstrap import bootstrap_v2
 from .v2_bugfixes import bugfix_api
 from .v2_clinical_compat import clinical_compat_api
 from .v2_clinical_history import clinical_history_api
+from .v2_clinical_hotfix import clinical_hotfix_api
 from .v2_extended_features import extended_api
 from .v2_record_fixes import record_fix_api
+from .v2_report_cache import report_cache_api
 from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
-from .v2_timeline_hotfix import timeline_hotfix_api
 
 app.add_middleware(SecurityHeadersMiddleware)
-# Rutas específicas primero para evitar colisiones con rutas dinámicas heredadas.
-app.include_router(timeline_hotfix_api)
+# Rutas específicas/compatibles primero para evitar colisiones con rutas heredadas.
+app.include_router(report_cache_api)
+app.include_router(clinical_hotfix_api)
 app.include_router(clinical_compat_api)
 app.include_router(v2_api)
 app.include_router(v2_public)
