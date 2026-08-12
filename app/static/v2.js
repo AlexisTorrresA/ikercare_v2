@@ -30,7 +30,7 @@
     .then(() => loadScript("/static/v2-visible-care-actions.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-medication-extras.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-sos-today.js?v=2.3.0"))
-    .then(() => loadScript("/static/v2-chemo-event-actions.js?v=2.3.0"))
+    .then(() => loadScript("/static/v2-chemo-event-actions.js?v=2.3.5"))
     .then(() => loadScript("/static/v2-chemo-order-report.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-dialog-refresh-guard.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-food-registration-fix.js?v=2.3.4"))
