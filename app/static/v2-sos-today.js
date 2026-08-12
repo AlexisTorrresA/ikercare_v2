@@ -80,6 +80,81 @@
     return card;
   }
 
+  function ensureSosDialog() {
+    let dialog = $("#sosUseDialog");
+    if (dialog) return dialog;
+    dialog = document.createElement("dialog");
+    dialog.id = "sosUseDialog";
+    dialog.innerHTML = `
+      <form id="sosUseForm" class="dialog-form">
+        <div class="dialog-head">
+          <div>
+            <h2>Registrar medicamento SOS</h2>
+            <p id="sosUseMedicationName" class="muted" style="margin:4px 0 0"></p>
+          </div>
+          <button type="button" class="icon-btn" data-close-sos-use aria-label="Cerrar">×</button>
+        </div>
+        <input type="hidden" name="medication_id">
+        <label>Fecha y hora
+          <input name="occurred_at" type="datetime-local" required>
+        </label>
+        <label>Observación opcional
+          <textarea name="notes" rows="4" placeholder="Ej.: motivo del uso, cómo estaba el paciente o alguna observación."></textarea>
+        </label>
+        <div class="button-row">
+          <button type="button" class="secondary" data-close-sos-use>Cancelar</button>
+          <button type="submit" class="primary">Registrar uso</button>
+        </div>
+      </form>`;
+    document.body.appendChild(dialog);
+
+    dialog.addEventListener("click", event => {
+      if (event.target === dialog || event.target.closest("[data-close-sos-use]")) dialog.close();
+    });
+    $("#sosUseForm", dialog)?.addEventListener("submit", submitSosUse);
+    return dialog;
+  }
+
+  function openSosDialog(medicationId, name) {
+    const dialog = ensureSosDialog();
+    const form = $("#sosUseForm", dialog);
+    form.reset();
+    form.elements.medication_id.value = String(medicationId);
+    form.elements.occurred_at.value = localDateTimeForSelectedDay();
+    $("#sosUseMedicationName", dialog).textContent = name;
+    dialog.showModal();
+    requestAnimationFrame(() => form.elements.occurred_at.focus());
+  }
+
+  async function submitSosUse(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const medicationId = Number(form.elements.medication_id.value);
+    const occurredAt = form.elements.occurred_at.value;
+    if (!medicationId || !occurredAt) {
+      toast("Selecciona la fecha y hora del uso SOS.", true);
+      return;
+    }
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      await api(`/api/v2/patients/${patientId()}/medications/${medicationId}/sos-use`, {
+        method: "POST",
+        body: JSON.stringify({
+          occurred_at: occurredAt,
+          notes: form.elements.notes.value.trim() || null,
+        }),
+      });
+      form.closest("dialog")?.close();
+      toast("Uso SOS registrado correctamente.");
+      await render();
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      submit.disabled = false;
+    }
+  }
+
   async function render() {
     const pid = patientId();
     const date = selectedDate();
@@ -124,29 +199,11 @@
       }).join("");
 
       root.querySelectorAll(".register-sos-use").forEach(button => {
-        button.addEventListener("click", () => registerUse(Number(button.dataset.id), button.dataset.name || "medicamento"));
+        button.addEventListener("click", () => openSosDialog(Number(button.dataset.id), button.dataset.name || "medicamento"));
       });
     } catch (error) {
       card.classList.remove("hidden");
       root.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
-    }
-  }
-
-  async function registerUse(medicationId, name) {
-    const note = prompt(`Registrar uso SOS de ${name}.\n\nObservación opcional:`, "");
-    if (note === null) return;
-    try {
-      await api(`/api/v2/patients/${patientId()}/medications/${medicationId}/sos-use`, {
-        method: "POST",
-        body: JSON.stringify({
-          occurred_at: localDateTimeForSelectedDay(),
-          notes: note.trim() || null,
-        }),
-      });
-      toast("Uso SOS registrado correctamente.");
-      await render();
-    } catch (error) {
-      toast(error.message, true);
     }
   }
 
@@ -162,6 +219,7 @@
 
   function init() {
     ensureContainer();
+    ensureSosDialog();
     bindRefreshes();
     setTimeout(render, 450);
   }
