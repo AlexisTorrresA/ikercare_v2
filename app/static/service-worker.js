@@ -6,7 +6,7 @@ const STATIC_ASSETS = [
   '/static/v2-clinical-history.js',
   '/static/v2-clinical-history.css',
   '/static/v2-clinical-preserve.js',
-  '/static/v2-visible-care-fixes.js',
+  '/static/v2-visible-care-fix.js',
   '/static/manifest.webmanifest',
   '/static/icons/favicon-64.png',
   '/static/icons/icon-192.png',
