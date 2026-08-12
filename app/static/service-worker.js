@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ikercare-static-v2.0.0-v2.3.8';
+const CACHE_NAME = 'ikercare-static-v2.0.0-v2.3.9';
 const STATIC_ASSETS = [
   '/static/v2.css',
   '/static/v2.js',
@@ -14,7 +14,7 @@ const STATIC_ASSETS = [
   '/static/v2-chemo-order-report.js',
   '/static/v2-dialog-refresh-guard.js',
   '/static/v2-food-registration-fix.js',
-  '/static/v2-medication-edit-fix.js',
+  '/static/v2-medication-manager-stable.js',
   '/static/manifest.webmanifest',
   '/static/icons/favicon-64.png',
   '/static/icons/icon-192.png',
