@@ -89,12 +89,13 @@
       <form id="sosUseForm" class="dialog-form">
         <div class="dialog-head">
           <div>
-            <h2>Registrar medicamento SOS</h2>
+            <h2 id="sosUseDialogTitle">Registrar medicamento SOS</h2>
             <p id="sosUseMedicationName" class="muted" style="margin:4px 0 0"></p>
           </div>
           <button type="button" class="icon-btn" data-close-sos-use aria-label="Cerrar">×</button>
         </div>
         <input type="hidden" name="medication_id">
+        <input type="hidden" name="event_id">
         <label>Fecha y hora
           <input name="occurred_at" type="datetime-local" required>
         </label>
@@ -103,7 +104,7 @@
         </label>
         <div class="button-row">
           <button type="button" class="secondary" data-close-sos-use>Cancelar</button>
-          <button type="submit" class="primary">Registrar uso</button>
+          <button type="submit" class="primary">Guardar</button>
         </div>
       </form>`;
     document.body.appendChild(dialog);
@@ -115,12 +116,15 @@
     return dialog;
   }
 
-  function openSosDialog(medicationId, name) {
+  function openSosDialog(medicationId, name, use = null) {
     const dialog = ensureSosDialog();
     const form = $("#sosUseForm", dialog);
     form.reset();
     form.elements.medication_id.value = String(medicationId);
-    form.elements.occurred_at.value = localDateTimeForSelectedDay();
+    form.elements.event_id.value = use?.id ? String(use.id) : "";
+    form.elements.occurred_at.value = use?.occurred_at ? String(use.occurred_at).slice(0, 16) : localDateTimeForSelectedDay();
+    form.elements.notes.value = use?.notes && use.notes !== "Administración SOS registrada" ? use.notes : "";
+    $("#sosUseDialogTitle", dialog).textContent = use ? "Editar registro SOS" : "Registrar medicamento SOS";
     $("#sosUseMedicationName", dialog).textContent = name;
     dialog.showModal();
     requestAnimationFrame(() => form.elements.occurred_at.focus());
@@ -130,6 +134,7 @@
     event.preventDefault();
     const form = event.currentTarget;
     const medicationId = Number(form.elements.medication_id.value);
+    const eventId = Number(form.elements.event_id.value || 0);
     const occurredAt = form.elements.occurred_at.value;
     if (!medicationId || !occurredAt) {
       toast("Selecciona la fecha y hora del uso SOS.", true);
@@ -138,20 +143,34 @@
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
-      await api(`/api/v2/patients/${patientId()}/medications/${medicationId}/sos-use`, {
-        method: "POST",
+      const url = eventId
+        ? `/api/v2/patients/${patientId()}/medications/${medicationId}/sos-use/${eventId}`
+        : `/api/v2/patients/${patientId()}/medications/${medicationId}/sos-use`;
+      await api(url, {
+        method: eventId ? "PUT" : "POST",
         body: JSON.stringify({
           occurred_at: occurredAt,
           notes: form.elements.notes.value.trim() || null,
         }),
       });
       form.closest("dialog")?.close();
-      toast("Uso SOS registrado correctamente.");
+      toast(eventId ? "Registro SOS actualizado." : "Uso SOS registrado correctamente.");
       await render();
     } catch (error) {
       toast(error.message, true);
     } finally {
       submit.disabled = false;
+    }
+  }
+
+  async function deleteSosUse(medicationId, eventId) {
+    if (!confirm("¿Eliminar este registro SOS?")) return;
+    try {
+      await api(`/api/v2/patients/${patientId()}/medications/${medicationId}/sos-use/${eventId}`, { method: "DELETE" });
+      toast("Registro SOS eliminado.");
+      await render();
+    } catch (error) {
+      toast(error.message, true);
     }
   }
 
@@ -173,9 +192,15 @@
         const uses = item.uses || [];
         const usedToday = uses.length > 0;
         const usesHtml = uses.map(use => `
-          <div class="sos-use-entry">
-            <strong>Usado ${escapeHtml(timeOnly(use.occurred_at))}</strong>
-            ${use.notes && use.notes !== "Administración SOS registrada" ? `<span>${escapeHtml(use.notes)}</span>` : ""}
+          <div class="sos-use-entry" data-sos-event="${use.id}">
+            <div>
+              <strong>Usado ${escapeHtml(timeOnly(use.occurred_at))}</strong>
+              ${use.notes && use.notes !== "Administración SOS registrada" ? `<span>${escapeHtml(use.notes)}</span>` : ""}
+            </div>
+            ${data.can_edit ? `<div class="button-row">
+              <button type="button" class="text-btn edit-sos-use" data-medication-id="${item.id}" data-event-id="${use.id}">Editar</button>
+              <button type="button" class="text-btn danger-text delete-sos-use" data-medication-id="${item.id}" data-event-id="${use.id}">Eliminar</button>
+            </div>` : ""}
           </div>`).join("");
         return `<article class="sos-med-card" data-sos-medication="${item.id}">
           <div class="sos-accent-rail"><span>SOS</span></div>
@@ -200,6 +225,18 @@
 
       root.querySelectorAll(".register-sos-use").forEach(button => {
         button.addEventListener("click", () => openSosDialog(Number(button.dataset.id), button.dataset.name || "medicamento"));
+      });
+      root.querySelectorAll(".edit-sos-use").forEach(button => {
+        button.addEventListener("click", () => {
+          const medicationId = Number(button.dataset.medicationId);
+          const eventId = Number(button.dataset.eventId);
+          const medication = items.find(item => item.id === medicationId);
+          const use = medication?.uses?.find(entry => entry.id === eventId);
+          if (medication && use) openSosDialog(medicationId, medication.name, use);
+        });
+      });
+      root.querySelectorAll(".delete-sos-use").forEach(button => {
+        button.addEventListener("click", () => deleteSosUse(Number(button.dataset.medicationId), Number(button.dataset.eventId)));
       });
     } catch (error) {
       card.classList.remove("hidden");
