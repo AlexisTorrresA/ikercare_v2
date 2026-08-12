@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ikercare-static-v2.0.0-v2.2.1';
+const CACHE_NAME = 'ikercare-static-v2.0.0-v2.2.3';
 const STATIC_ASSETS = [
   '/static/v2.css',
   '/static/v2.js',
@@ -6,6 +6,8 @@ const STATIC_ASSETS = [
   '/static/v2-clinical-history.js',
   '/static/v2-clinical-history.css',
   '/static/v2-clinical-preserve.js',
+  '/static/v2-visible-care-fixes.js',
+  '/static/v2-visible-care-actions.js',
   '/static/manifest.webmanifest',
   '/static/icons/favicon-64.png',
   '/static/icons/icon-192.png',
