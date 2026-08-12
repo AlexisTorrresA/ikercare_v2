@@ -28,12 +28,12 @@
     .then(() => loadScript("/static/v2-report-download-fix.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-visible-care-fixes.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-visible-care-actions.js?v=2.3.0"))
-    .then(() => loadScript("/static/v2-medication-extras.js?v=2.3.0"))
+    .then(() => loadScript("/static/v2-medication-extras.js?v=2.3.10"))
     .then(() => loadScript("/static/v2-sos-today.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-chemo-event-actions.js?v=2.3.6"))
     .then(() => loadScript("/static/v2-chemo-order-report.js?v=2.3.0"))
-    .then(() => loadScript("/static/v2-dialog-refresh-guard.js?v=2.3.0"))
+    .then(() => loadScript("/static/v2-dialog-refresh-guard.js?v=2.3.10"))
     .then(() => loadScript("/static/v2-food-registration-fix.js?v=2.3.4"))
-    .then(() => loadScript("/static/v2-medication-manager-stable.js?v=2.3.9"))
+    .then(() => loadScript("/static/v2-medication-manager-stable.js?v=2.3.10"))
     .catch(error => console.error("No se pudo cargar IkerCare 2", error));
 })();
