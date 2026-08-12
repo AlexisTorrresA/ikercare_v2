@@ -4,6 +4,7 @@
   const app = document.getElementById("app");
   if (!app) return;
   const csrf = app.dataset.csrf || "";
+  let medicationManagerLoading = false;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -83,12 +84,15 @@
 
   async function openMedicationManager() {
     const id = patientId();
-    if (!id) return;
+    if (!id || medicationManagerLoading) return;
     ensureMedicationManager();
     const dialog = $("#medicationManagerDialog");
     const root = $("#configuredMedicationList");
+    const button = $("#manageMedicationsBtn");
+    medicationManagerLoading = true;
+    if (button) button.disabled = true;
     root.innerHTML = `<p class="empty">Cargando…</p>`;
-    dialog.showModal();
+    if (!dialog.open) dialog.showModal();
     try {
       const medications = await api(`/api/v2/patients/${id}/medications`);
       const active = medications.filter(item => item.active !== false);
@@ -110,6 +114,9 @@
       $$(".delete-managed-med", root).forEach(button => button.addEventListener("click", () => deleteMedication(button)));
     } catch (error) {
       root.innerHTML = `<p class="empty">${esc(error.message)}</p>`;
+    } finally {
+      medicationManagerLoading = false;
+      if (button) button.disabled = false;
     }
   }
 
