@@ -18,6 +18,7 @@ from .v2_bootstrap import bootstrap_v2
 from .v2_bugfixes import bugfix_api
 from .v2_clinical_history import clinical_history_api
 from .v2_extended_features import extended_api
+from .v2_medication_history_hotfix import medication_history_hotfix_api
 from .v2_record_fixes import record_fix_api
 from .v2_report_alias import report_alias_api
 from .v2_router import PRIVACY_VERSION, api as v2_api, public as v2_public
@@ -28,6 +29,8 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(timeline_hotfix_api)
 app.include_router(v2_api)
 app.include_router(v2_public)
+# Las rutas de historial de medicamento preservan el contrato existente y los horarios al suspender/reanudar.
+app.include_router(medication_history_hotfix_api)
 # Las rutas nuevas/estáticas se registran antes de las rutas dinámicas /{item_id}.
 app.include_router(clinical_history_api)
 app.include_router(report_alias_api)
