@@ -28,6 +28,11 @@
     return Number($("#patientSelect")?.value || 0) || null;
   }
 
+  function localDateTimeValue(date = new Date()) {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  }
+
   function esc(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -63,6 +68,63 @@
       throw new Error(typeof detail === "string" ? detail : "No se pudo completar la acción.");
     }
     return payload;
+  }
+
+  function ensureCreateDialog() {
+    let dialog = $("#chemoEvolutionCreateDialog");
+    if (dialog) return dialog;
+    dialog = document.createElement("dialog");
+    dialog.id = "chemoEvolutionCreateDialog";
+    dialog.innerHTML = `
+      <form id="chemoEvolutionCreateForm" class="dialog-form">
+        <div class="dialog-head">
+          <h2>Registrar evolución posterior</h2>
+          <button type="button" class="icon-btn" data-close-chemo-evolution-create aria-label="Cerrar">×</button>
+        </div>
+        <input type="hidden" name="chemo_id">
+        <label>Fecha y hora<input name="occurred_at" type="datetime-local" required></label>
+        <label>Tipo de evento
+          <select name="event_type">${EVENT_TYPES.map(value => `<option>${esc(value)}</option>`).join("")}</select>
+        </label>
+        <label>Descripción / observación<textarea name="description"></textarea></label>
+        <button type="submit" class="primary">Guardar evento</button>
+      </form>`;
+    document.body.appendChild(dialog);
+    dialog.addEventListener("click", event => {
+      if (event.target === dialog || event.target.closest("[data-close-chemo-evolution-create]")) dialog.close();
+    });
+    $("#chemoEvolutionCreateForm", dialog).addEventListener("submit", saveCreate);
+    return dialog;
+  }
+
+  function openCreate(chemoId) {
+    const dialog = ensureCreateDialog();
+    const form = $("#chemoEvolutionCreateForm", dialog);
+    form.reset();
+    form.elements.chemo_id.value = String(chemoId);
+    form.elements.occurred_at.value = localDateTimeValue();
+    dialog.showModal();
+  }
+
+  async function saveCreate(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const chemoId = Number(form.elements.chemo_id.value);
+    try {
+      await api(`/api/v2/patients/${patientId()}/chemo/${chemoId}/events`, {
+        method: "POST",
+        body: JSON.stringify({
+          occurred_at: form.elements.occurred_at.value,
+          event_type: form.elements.event_type.value,
+          description: form.elements.description.value.trim() || null,
+        }),
+      });
+      form.closest("dialog")?.close();
+      toast("Evolución de quimioterapia registrada.");
+      await refreshChemo(chemoId);
+    } catch (error) {
+      toast(error.message, true);
+    }
   }
 
   function ensureEditDialog() {
@@ -138,8 +200,28 @@
     }
   }
 
+  function ensureEvolutionBlock(card, chemoId) {
+    let root = $(".chemo-evolution-list", card);
+    if (root) return root;
+
+    const body = $(".care-record-body", card);
+    if (!body) return null;
+
+    const section = document.createElement("div");
+    section.className = "chemo-evolution";
+    section.innerHTML = `
+      <div class="chemo-evolution-head">
+        <strong>Evolución posterior</strong>
+        <button type="button" class="small secondary chemo-evolution-add-persistent">+ Registrar evolución</button>
+      </div>
+      <div class="chemo-evolution-list"><span class="muted">Cargando evolución…</span></div>`;
+    body.appendChild(section);
+    $(".chemo-evolution-add-persistent", section)?.addEventListener("click", () => openCreate(chemoId));
+    return $(".chemo-evolution-list", section);
+  }
+
   function renderEvents(card, chemoId, events) {
-    const root = $(".chemo-evolution-list", card);
+    const root = ensureEvolutionBlock(card, chemoId);
     if (!root) return;
     root.innerHTML = events.length ? events.map(item => `
       <div class="chemo-event" data-chemo-event-id="${item.id}">
@@ -162,7 +244,8 @@
 
   async function refreshChemo(chemoId) {
     const card = $(`#chemoList .stable-care-card.chemo[data-id="${chemoId}"]`);
-    if (!card || !$(".chemo-evolution-list", card)) return;
+    if (!card) return;
+    ensureEvolutionBlock(card, chemoId);
     try {
       const events = await api(`/api/v2/patients/${patientId()}/chemo/${chemoId}/events`);
       renderEvents(card, chemoId, events);
@@ -175,25 +258,31 @@
     const cards = $$("#chemoList .stable-care-card.chemo");
     for (const card of cards) {
       const chemoId = Number(card.dataset.id || 0);
-      if (!chemoId || !$(".chemo-evolution-list", card)) continue;
+      if (!chemoId) continue;
+      ensureEvolutionBlock(card, chemoId);
       await refreshChemo(chemoId);
     }
   }
 
-  function scheduleEnhance() {
+  function scheduleEnhance(delay = 120) {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(enhanceAll, 120);
+    refreshTimer = setTimeout(enhanceAll, delay);
   }
 
   function init() {
+    ensureCreateDialog();
     ensureEditDialog();
     const root = $("#chemoList");
-    if (root) new MutationObserver(scheduleEnhance).observe(root, { childList: true, subtree: true });
-    $("#patientSelect")?.addEventListener("change", () => setTimeout(enhanceAll, 200));
+    if (root) new MutationObserver(() => scheduleEnhance()).observe(root, { childList: true, subtree: true });
+    $("#patientSelect")?.addEventListener("change", () => scheduleEnhance(350));
     document.addEventListener("click", event => {
-      if (event.target.closest('[data-app-nav="chemo"]')) setTimeout(enhanceAll, 180);
+      if (event.target.closest('[data-app-nav="chemo"], [data-app-nav="care"], [data-nav="care"]')) {
+        // El render de Cuidados puede reconstruir las tarjetas después del cambio de pestaña.
+        // Se vuelve a consultar la evolución una vez finalizado ese render.
+        scheduleEnhance(430);
+      }
     });
-    setTimeout(enhanceAll, 500);
+    scheduleEnhance(500);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
