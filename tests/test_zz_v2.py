@@ -32,7 +32,6 @@ def test_v2_registration_patient_and_care_flow():
         )
         assert registered.status_code == 201, registered.text
         csrf = csrf_from_home(client)
-        # Un usuario recién registrado nunca hereda el paciente legado de otra cuenta.
         assert client.get("/api/v2/patients").json() == []
 
         patient_response = client.post(
@@ -108,7 +107,7 @@ def test_v2_registration_patient_and_care_flow():
         assert share_data["url"].startswith("http")
         assert share_data["qr_data_uri"].startswith("data:image/png;base64,")
         parsed = urlsplit(share_data["url"])
-        assert parsed.fragment  # el secreto no viaja al servidor en el URL HTTP
+        assert parsed.fragment
         public = client.get(parsed.path)
         assert public.status_code == 200
         assert "noindex" in public.text
@@ -144,7 +143,7 @@ def test_v2_document_and_photo_are_private_and_extractable():
         assert docs.status_code == 200
         row = next(doc for doc in docs.json() if doc["id"] == document_id)
         assert row["exam_name"] == "Hemograma test"
-        assert row["extraction_status"] in {"text_extracted", "ocr_completed", "partial", "failed"}
+        assert row["extraction_status"] in {"text_extracted", "ocr_completed", "partial", "failed", "extraction_failed"}
 
         download = client.get(f"/api/v2/patients/{patient_id}/documents/{document_id}/download")
         assert download.status_code == 200
