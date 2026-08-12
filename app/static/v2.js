@@ -33,5 +33,6 @@
     .then(() => loadScript("/static/v2-chemo-event-actions.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-chemo-order-report.js?v=2.3.0"))
     .then(() => loadScript("/static/v2-dialog-refresh-guard.js?v=2.3.0"))
+    .then(() => loadScript("/static/v2-food-registration-fix.js?v=2.3.3"))
     .catch(error => console.error("No se pudo cargar IkerCare 2", error));
 })();
