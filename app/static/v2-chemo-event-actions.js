@@ -273,7 +273,9 @@
     ensureCreateDialog();
     ensureEditDialog();
     const root = $("#chemoList");
-    if (root) new MutationObserver(() => scheduleEnhance()).observe(root, { childList: true, subtree: true });
+    // Solo observa cuando la lista de quimioterapias es reconstruida. Los cambios
+    // internos de la propia evolución no deben disparar nuevas consultas en bucle.
+    if (root) new MutationObserver(() => scheduleEnhance()).observe(root, { childList: true });
     $("#patientSelect")?.addEventListener("change", () => scheduleEnhance(350));
     document.addEventListener("click", event => {
       if (event.target.closest('[data-app-nav="chemo"], [data-app-nav="care"], [data-nav="care"]')) {
