@@ -39,6 +39,59 @@ def _sos_meta(db: Session, medication_id: int) -> CareRecordMeta | None:
     )
 
 
+def _set_sos_meta(db: Session, medication_id: int, is_sos: bool) -> None:
+    row = _sos_meta(db, medication_id)
+    if not row:
+        db.add(CareRecordMeta(entity_type="medication", entity_id=medication_id, key="is_sos", value="1" if is_sos else "0"))
+    else:
+        row.value = "1" if is_sos else "0"
+
+
+@medication_controls_api.post("/patients/{patient_id}/medications-with-options", status_code=201)
+def create_medication_with_options(
+    patient_id: int,
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    _: None = Depends(verify_csrf),
+) -> dict:
+    _require_role(db, user.id, patient_id, {"owner", "editor"})
+    name = str(payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Escribe el nombre del medicamento.")
+    is_sos = bool(payload.get("is_sos"))
+    times = [] if is_sos else [str(v).strip() for v in (payload.get("times") or []) if str(v).strip()]
+    frequency = (str(payload.get("frequency") or "").strip() or None)
+    if is_sos and not frequency:
+        frequency = "SOS / según indicación"
+    med = CareMedication(
+        patient_id=patient_id,
+        name=name[:160],
+        generic_name=payload.get("generic_name") or None,
+        medication_type=(str(payload.get("medication_type") or "Medicamento").strip() or "Medicamento")[:120],
+        purpose=(str(payload.get("purpose") or "").strip() or None),
+        dose=(str(payload.get("dose") or "").strip() or None),
+        route=(str(payload.get("route") or "").strip() or None),
+        frequency=frequency,
+        instructions=(str(payload.get("instructions") or "").strip() or None),
+        source="manual",
+        active=True,
+        created_by_user_id=user.id,
+    )
+    db.add(med)
+    db.flush()
+    for value in times:
+        try:
+            parsed = datetime.strptime(value, "%H:%M").time()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"Horario inválido: {value}.") from exc
+        db.add(CareMedicationSchedule(medication_id=med.id, time_of_day=parsed, active=True))
+    _set_sos_meta(db, med.id, is_sos)
+    _audit(db, user.id, patient_id, "medication.created", "medication", med.id, {"name": med.name, "is_sos": is_sos})
+    db.commit()
+    return {"id": med.id, "name": med.name, "is_sos": is_sos, "times": times}
+
+
 @medication_controls_api.get("/patients/{patient_id}/medications/{medication_id}/sos")
 def get_medication_sos(
     patient_id: int,
@@ -64,20 +117,11 @@ def set_medication_sos(
     _require_role(db, user.id, patient_id, {"owner", "editor"})
     med = _medication(db, patient_id, medication_id)
     is_sos = bool(payload.get("is_sos"))
-    row = _sos_meta(db, medication_id)
-    if not row:
-        row = CareRecordMeta(entity_type="medication", entity_id=medication_id, key="is_sos", value="1" if is_sos else "0")
-        db.add(row)
-    else:
-        row.value = "1" if is_sos else "0"
-
+    _set_sos_meta(db, medication_id, is_sos)
     if is_sos:
-        # Un medicamento SOS no tiene recordatorios horarios automáticos.
-        for schedule in db.scalars(
-            select(CareMedicationSchedule).where(CareMedicationSchedule.medication_id == medication_id)
-        ).all():
+        for schedule in db.scalars(select(CareMedicationSchedule).where(CareMedicationSchedule.medication_id == medication_id)).all():
             schedule.active = False
-        if not med.frequency or med.frequency.strip().lower() in {"cada 24 horas", "diario"}:
+        if not med.frequency:
             med.frequency = "SOS / según indicación"
     med.updated_at = now()
     _audit(db, user.id, patient_id, "medication.sos_updated", "medication", medication_id, {"is_sos": is_sos})
@@ -124,12 +168,7 @@ def delete_treatment_history_entry(
 ) -> dict:
     _require_role(db, user.id, patient_id, {"owner", "editor"})
     med = _medication(db, patient_id, medication_id)
-    entry = db.scalar(
-        select(MedicationTreatmentHistory).where(
-            MedicationTreatmentHistory.id == history_id,
-            MedicationTreatmentHistory.medication_id == medication_id,
-        )
-    )
+    entry = db.scalar(select(MedicationTreatmentHistory).where(MedicationTreatmentHistory.id == history_id, MedicationTreatmentHistory.medication_id == medication_id))
     if not entry:
         raise HTTPException(status_code=404, detail="Registro histórico no encontrado.")
     db.delete(entry)
@@ -150,21 +189,11 @@ def permanently_delete_medication(
     med = _medication(db, patient_id, medication_id)
     name = med.name
     source = med.source
-
-    # Si provenía de la sincronización inicial, deja una marca para que no vuelva a crearse.
     if source == SOURCE_MARKER:
         key = " ".join(name.strip().casefold().split())[:80]
-        tombstone = db.scalar(
-            select(CareRecordMeta).where(
-                CareRecordMeta.entity_type == "deleted_seed_medication",
-                CareRecordMeta.entity_id == patient_id,
-                CareRecordMeta.key == key,
-            )
-        )
+        tombstone = db.scalar(select(CareRecordMeta).where(CareRecordMeta.entity_type == "deleted_seed_medication", CareRecordMeta.entity_id == patient_id, CareRecordMeta.key == key))
         if not tombstone:
             db.add(CareRecordMeta(entity_type="deleted_seed_medication", entity_id=patient_id, key=key, value="1"))
-
-    # Limpieza explícita para mantener compatibilidad también en instalaciones sin cascadas activas.
     schedule_ids = db.scalars(select(CareMedicationSchedule.id).where(CareMedicationSchedule.medication_id == medication_id)).all()
     if schedule_ids:
         db.execute(delete(CareMedicationLog).where(CareMedicationLog.schedule_id.in_(schedule_ids)))
