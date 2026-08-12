@@ -4,15 +4,25 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .auth import get_current_user, verify_csrf
 from .db import get_db
 from .models import User
-from .v2_clinical_history import MedicationState, MedicationTreatmentHistory, _ensure_initial_snapshot
+from .v2_clinical_history import (
+    MedicationState,
+    MedicationTreatmentHistory,
+    _ai_narrative,
+    _ensure_initial_snapshot,
+    _history_dict,
+    _hospital_facts,
+    _local_narrative,
+    _pdf_bytes,
+)
 from .v2_models import CareMedication, CareMedicationSchedule
-from .v2_router import _audit, _require_role, now
+from .v2_router import _audit, _membership, _require_role, now
 
 status_api = APIRouter(prefix="/api/v2", tags=["IkerCare medication status"])
 
@@ -57,7 +67,26 @@ def _add_snapshot(db: Session, med: CareMedication, user_id: int, occurred_at: d
     return row
 
 
-@status_api.put("/patients/{patient_id}/medications/{medication_id}/history-update-v2")
+# Estas tres rutas se registran antes que las versiones de compatibilidad de
+# v2_clinical_history. Mantienen la misma URL usada por el frontend existente.
+@status_api.get("/patients/{patient_id}/medications/{medication_id}/treatment-history")
+def treatment_history_v2(patient_id: int, medication_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> list[dict]:
+    _membership(db, user.id, patient_id)
+    med = db.scalar(select(CareMedication).where(CareMedication.id == medication_id, CareMedication.patient_id == patient_id))
+    if not med:
+        raise HTTPException(status_code=404, detail="Medicamento no encontrado.")
+    _ensure_initial_snapshot(db, med, user.id)
+    _state(db, med)
+    db.commit()
+    rows = db.scalars(
+        select(MedicationTreatmentHistory)
+        .where(MedicationTreatmentHistory.medication_id == med.id)
+        .order_by(MedicationTreatmentHistory.occurred_at, MedicationTreatmentHistory.id)
+    ).all()
+    return [_history_dict(row) for row in rows]
+
+
+@status_api.put("/patients/{patient_id}/medications/{medication_id}/history-update")
 def history_update_v2(
     patient_id: int,
     medication_id: int,
@@ -101,7 +130,7 @@ def history_update_v2(
     return {"ok": True, "changed_fields": changed}
 
 
-@status_api.post("/patients/{patient_id}/medications/{medication_id}/status-v2")
+@status_api.post("/patients/{patient_id}/medications/{medication_id}/status")
 def status_change_v2(
     patient_id: int,
     medication_id: int,
@@ -153,3 +182,43 @@ def status_change_v2(
     _audit(db, user.id, patient_id, f"medication.status.{status}", "medication", med.id, {"reason": reason})
     db.commit()
     return {"ok": True, "status": status, "active": active}
+
+
+# Alias usados por la interfaz de Reportes para el informe completo de una estadía.
+@status_api.get("/patients/{patient_id}/hospitalizations/{hospitalization_id}/hospital-report")
+def hospital_report_alias(patient_id: int, hospitalization_id: int, use_ai: bool = True, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> dict:
+    _membership(db, user.id, patient_id)
+    facts = _hospital_facts(db, patient_id, hospitalization_id)
+    # Compatibilidad visual: además de blood_pressure expone sistólica/diastólica.
+    for day in facts.get("days", []):
+        for vital in day.get("vitals", []):
+            value = vital.get("blood_pressure")
+            if value and "/" in value:
+                left, right = value.split("/", 1)
+                vital["systolic"], vital["diastolic"] = left, right
+    narrative, ai_used, message = _ai_narrative(facts) if use_ai else (_local_narrative(facts), False, None)
+    return {"facts": facts, "statistics": facts["statistics"], "narrative": narrative, "ai_used": ai_used, "ai_message": message}
+
+
+@status_api.get("/patients/{patient_id}/hospitalizations/{hospitalization_id}/hospital-report.pdf")
+def hospital_report_pdf_alias(patient_id: int, hospitalization_id: int, use_ai: bool = True, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> Response:
+    _membership(db, user.id, patient_id)
+    try:
+        facts = _hospital_facts(db, patient_id, hospitalization_id)
+        narrative, ai_used, message = _ai_narrative(facts) if use_ai else (_local_narrative(facts), False, None)
+        pdf = _pdf_bytes({"facts": facts, "narrative": narrative, "ai_used": ai_used, "ai_message": message})
+        return Response(
+            pdf,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="IkerCare-hospitalizacion-{hospitalization_id}.pdf"',
+                "Content-Length": str(len(pdf)),
+                "Cache-Control": "private, no-store",
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        import logging
+        logging.getLogger("ikercare.clinical_history").exception("Hospital report PDF failed patient=%s hospitalization=%s", patient_id, hospitalization_id)
+        raise HTTPException(status_code=500, detail="No fue posible generar el PDF. Inténtalo nuevamente.") from exc
