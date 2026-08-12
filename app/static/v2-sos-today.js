@@ -67,15 +67,15 @@
     if (!regularCard) return null;
     card = document.createElement("article");
     card.id = "sosMedicationCard";
-    card.className = "card hidden";
+    card.className = "card sos-medication-section hidden";
     card.innerHTML = `
-      <div class="card-head">
+      <div class="card-head sos-section-head">
         <div>
           <h2>Medicamentos SOS</h2>
-          <p class="muted" style="margin:4px 0 0">Solo se registran cuando se administran.</p>
+          <p class="muted">Solo se registran cuando se administran.</p>
         </div>
       </div>
-      <div id="sosMedicationList" class="stack"></div>`;
+      <div id="sosMedicationList" class="sos-medication-list"></div>`;
     regularCard.insertAdjacentElement("afterend", card);
     return card;
   }
@@ -95,17 +95,32 @@
         return;
       }
       root.innerHTML = items.map(item => {
-        const details = [item.dose, item.route, item.purpose].filter(Boolean).join(" · ");
-        const uses = (item.uses || []).map(use => `
-          <div class="muted" style="margin-top:6px"><strong>Usado ${escapeHtml(timeOnly(use.occurred_at))}</strong>${use.notes && use.notes !== "Administración SOS registrada" ? ` · ${escapeHtml(use.notes)}` : ""}</div>`).join("");
-        return `<div class="med-row" data-sos-medication="${item.id}">
-          <div class="med-main">
-            <div class="med-title"><strong>${escapeHtml(item.name)}</strong>${item.dose ? ` <span>${escapeHtml(item.dose)}</span>` : ""} <span class="badge">SOS</span></div>
-            <div class="muted">${escapeHtml(details)}</div>
-            ${uses || `<small class="muted">Sin uso registrado este día.</small>`}
+        const uses = item.uses || [];
+        const usedToday = uses.length > 0;
+        const usesHtml = uses.map(use => `
+          <div class="sos-use-entry">
+            <strong>Usado ${escapeHtml(timeOnly(use.occurred_at))}</strong>
+            ${use.notes && use.notes !== "Administración SOS registrada" ? `<span>${escapeHtml(use.notes)}</span>` : ""}
+          </div>`).join("");
+        return `<article class="sos-med-card" data-sos-medication="${item.id}">
+          <div class="sos-accent-rail"><span>SOS</span></div>
+          <div class="sos-med-content">
+            <div class="sos-med-top">
+              <div class="sos-med-copy">
+                <h3>${escapeHtml(item.name)}</h3>
+                <div class="sos-med-pills">
+                  ${item.dose ? `<span class="sos-pill dose">Dosis: ${escapeHtml(item.dose)}</span>` : ""}
+                  ${item.route ? `<span class="sos-pill route">${escapeHtml(item.route)}</span>` : ""}
+                  <span class="sos-pill sos-label">SOS / según necesidad</span>
+                </div>
+              </div>
+              <span class="sos-state ${usedToday ? "used" : "unused"}">${usedToday ? "Usado hoy" : "Sin uso hoy"}</span>
+            </div>
+            ${item.purpose ? `<p class="sos-purpose"><strong>Para qué sirve:</strong> ${escapeHtml(item.purpose)}</p>` : ""}
+            <div class="sos-uses">${usesHtml || `<span class="sos-empty-use">Sin uso registrado este día.</span>`}</div>
+            ${data.can_edit ? `<button type="button" class="register-sos-use" data-id="${item.id}" data-name="${escapeHtml(item.name)}">Registrar uso</button>` : ""}
           </div>
-          ${data.can_edit ? `<button type="button" class="secondary small register-sos-use" data-id="${item.id}" data-name="${escapeHtml(item.name)}">Registrar uso</button>` : ""}
-        </div>`;
+        </article>`;
       }).join("");
 
       root.querySelectorAll(".register-sos-use").forEach(button => {
