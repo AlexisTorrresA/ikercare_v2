@@ -7,6 +7,8 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   let refreshTimer = null;
+  let pendingForce = false;
+  const eventCache = new Map();
 
   const EVENT_TYPES = [
     "Náuseas",
@@ -70,6 +72,12 @@
     return payload;
   }
 
+  function chemoCard(chemoId) {
+    const root = $("#chemoList");
+    if (!root) return null;
+    return root.querySelector(`[data-kind="chemo"][data-id="${chemoId}"], .stable-care-card.chemo[data-id="${chemoId}"], .persistent-chemo-card[data-id="${chemoId}"]`);
+  }
+
   function ensureCreateDialog() {
     let dialog = $("#chemoEvolutionCreateDialog");
     if (dialog) return dialog;
@@ -121,7 +129,7 @@
       });
       form.closest("dialog")?.close();
       toast("Evolución de quimioterapia registrada.");
-      await refreshChemo(chemoId);
+      await refreshChemo(chemoId, true);
     } catch (error) {
       toast(error.message, true);
     }
@@ -183,7 +191,7 @@
       });
       form.closest("dialog")?.close();
       toast("Evento de quimioterapia modificado correctamente.");
-      await refreshChemo(chemoId);
+      await refreshChemo(chemoId, true);
     } catch (error) {
       toast(error.message, true);
     }
@@ -194,7 +202,7 @@
     try {
       await api(`/api/v2/patients/${patientId()}/chemo/${chemoId}/events/${eventId}`, { method: "DELETE" });
       toast("Evento de quimioterapia eliminado correctamente.");
-      await refreshChemo(chemoId);
+      await refreshChemo(chemoId, true);
     } catch (error) {
       toast(error.message, true);
     }
@@ -242,49 +250,77 @@
     });
   }
 
-  async function refreshChemo(chemoId) {
-    const card = $(`#chemoList .stable-care-card.chemo[data-id="${chemoId}"]`);
+  async function refreshChemo(chemoId, force = false) {
+    let card = chemoCard(chemoId);
     if (!card) return;
-    ensureEvolutionBlock(card, chemoId);
+
+    const cached = eventCache.get(chemoId);
+    if (cached) renderEvents(card, chemoId, cached);
+    else ensureEvolutionBlock(card, chemoId);
+
+    if (cached && !force) return;
+
     try {
       const events = await api(`/api/v2/patients/${patientId()}/chemo/${chemoId}/events`);
-      renderEvents(card, chemoId, events);
-    } catch (_) {}
-  }
-
-  async function enhanceAll() {
-    const pid = patientId();
-    if (!pid) return;
-    const cards = $$("#chemoList .stable-care-card.chemo");
-    for (const card of cards) {
-      const chemoId = Number(card.dataset.id || 0);
-      if (!chemoId) continue;
-      ensureEvolutionBlock(card, chemoId);
-      await refreshChemo(chemoId);
+      eventCache.set(chemoId, events);
+      card = chemoCard(chemoId);
+      if (card) renderEvents(card, chemoId, events);
+    } catch (error) {
+      card = chemoCard(chemoId);
+      const root = card ? ensureEvolutionBlock(card, chemoId) : null;
+      if (root && !eventCache.has(chemoId)) {
+        root.innerHTML = `<span class="muted">No se pudo cargar la evolución.</span>`;
+      }
     }
   }
 
-  function scheduleEnhance(delay = 120) {
+  async function enhanceAll(force = false) {
+    const pid = patientId();
+    if (!pid) return;
+    const cards = $$("#chemoList [data-kind='chemo'][data-id], #chemoList .stable-care-card.chemo[data-id]");
+    const ids = [...new Set(cards.map(card => Number(card.dataset.id || 0)).filter(Boolean))];
+    await Promise.all(ids.map(chemoId => refreshChemo(chemoId, force)));
+  }
+
+  function scheduleEnhance(delay = 120, force = false) {
+    pendingForce = pendingForce || force;
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(enhanceAll, delay);
+    refreshTimer = setTimeout(() => {
+      const doForce = pendingForce;
+      pendingForce = false;
+      enhanceAll(doForce);
+    }, delay);
   }
 
   function init() {
     ensureCreateDialog();
     ensureEditDialog();
     const root = $("#chemoList");
-    // Solo observa cuando la lista de quimioterapias es reconstruida. Los cambios
-    // internos de la propia evolución no deben disparar nuevas consultas en bucle.
-    if (root) new MutationObserver(() => scheduleEnhance()).observe(root, { childList: true });
-    $("#patientSelect")?.addEventListener("change", () => scheduleEnhance(350));
+    if (root) {
+      new MutationObserver(mutations => {
+        const changedChemoCards = mutations.some(mutation =>
+          [...mutation.addedNodes].some(node =>
+            node instanceof Element &&
+            (node.matches?.("[data-kind='chemo'][data-id], .stable-care-card.chemo[data-id]") ||
+              node.querySelector?.("[data-kind='chemo'][data-id], .stable-care-card.chemo[data-id]"))
+          )
+        );
+        if (changedChemoCards) scheduleEnhance(100, false);
+      }).observe(root, { childList: true });
+    }
+
+    $("#patientSelect")?.addEventListener("change", () => {
+      eventCache.clear();
+      scheduleEnhance(350, true);
+    });
+
     document.addEventListener("click", event => {
       if (event.target.closest('[data-app-nav="chemo"], [data-app-nav="care"], [data-nav="care"]')) {
-        // El render de Cuidados puede reconstruir las tarjetas después del cambio de pestaña.
-        // Se vuelve a consultar la evolución una vez finalizado ese render.
-        scheduleEnhance(430);
+        scheduleEnhance(430, false);
       }
     });
-    scheduleEnhance(500);
+
+    scheduleEnhance(500, true);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
