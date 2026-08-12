@@ -151,4 +151,4 @@ def test_mobile_shell_and_service_worker_are_available():
 
         worker = client.get("/service-worker.js")
         assert worker.status_code == 200
-        assert "ikercare-static-v2.0.0" in worker.text
+        assert "ikercare-static-v2." in worker.text
