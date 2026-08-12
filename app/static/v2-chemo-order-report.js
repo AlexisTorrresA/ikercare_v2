@@ -3,6 +3,7 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  let sortTimer = null;
 
   function patientId() {
     return Number($("#patientSelect")?.value || 0) || null;
@@ -30,9 +31,21 @@
   function sortLatestFirst() {
     const root = $("#chemoList");
     if (!root) return;
-    const cards = $$(".stable-care-card.chemo", root);
-    if (cards.length < 2) return;
-    cards.sort((a, b) => chemoDate(b) - chemoDate(a)).forEach(card => root.appendChild(card));
+    const current = $$(".stable-care-card.chemo", root);
+    if (current.length < 2) return;
+
+    const sorted = [...current].sort((a, b) => chemoDate(b) - chemoDate(a));
+    const alreadySorted = sorted.every((card, index) => card === current[index]);
+    if (alreadySorted) return;
+
+    const fragment = document.createDocumentFragment();
+    sorted.forEach(card => fragment.appendChild(card));
+    root.appendChild(fragment);
+  }
+
+  function scheduleSort(delay = 50) {
+    clearTimeout(sortTimer);
+    sortTimer = setTimeout(sortLatestFirst, delay);
   }
 
   function ensurePdfButton() {
@@ -99,13 +112,16 @@
 
   function init() {
     ensurePdfButton();
-    sortLatestFirst();
+    scheduleSort(0);
     const root = $("#chemoList");
-    if (root) new MutationObserver(() => setTimeout(sortLatestFirst, 50)).observe(root, { childList: true });
-    $("#patientSelect")?.addEventListener("change", () => setTimeout(sortLatestFirst, 250));
+    if (root) new MutationObserver(() => scheduleSort()).observe(root, { childList: true });
+    $("#patientSelect")?.addEventListener("change", () => scheduleSort(250));
     document.addEventListener("click", event => {
       if (event.target.closest('[data-app-nav="chemo"], [data-nav="care"]')) {
-        setTimeout(() => { ensurePdfButton(); sortLatestFirst(); }, 180);
+        setTimeout(() => {
+          ensurePdfButton();
+          scheduleSort(0);
+        }, 180);
       }
     });
   }
