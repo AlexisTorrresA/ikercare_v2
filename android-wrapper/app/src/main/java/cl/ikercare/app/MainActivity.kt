@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         requestNotificationPermissionIfNeeded()
 
         swipeRefresh.setOnRefreshListener { loadFreshApp() }
+        swipeRefresh.setOnChildScrollUpCallback { _, _ -> webView.canScrollVertically(-1) }
         findViewById<Button>(R.id.retryButton).setOnClickListener { loadFreshApp() }
         findViewById<Button>(R.id.errorLogoutButton).setOnClickListener { showNativeLogin(clearSession = true) }
         findViewById<Button>(R.id.loginButton).setOnClickListener { performLogin() }
@@ -139,6 +140,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 swipeRefresh.isRefreshing = false
+                swipeRefresh.isEnabled = true
                 errorPanel.visibility = View.GONE
                 val path = runCatching { Uri.parse(url).path.orEmpty() }.getOrDefault("")
                 if (path == "/login" || path.startsWith("/login/")) {
@@ -310,6 +312,7 @@ class MainActivity : AppCompatActivity() {
         errorPanel.visibility = View.GONE
         loginPanel.visibility = View.GONE
         swipeRefresh.visibility = View.VISIBLE
+        swipeRefresh.isEnabled = true
         webView.visibility = View.VISIBLE
         swipeRefresh.isRefreshing = true
         webView.stopLoading()
@@ -327,6 +330,7 @@ class MainActivity : AppCompatActivity() {
             CookieManager.getInstance().flush()
         }
         swipeRefresh.isRefreshing = false
+        swipeRefresh.isEnabled = true
         progressBar.visibility = View.GONE
         errorPanel.visibility = View.GONE
         swipeRefresh.visibility = View.GONE
@@ -337,6 +341,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showConnectionError() {
         swipeRefresh.isRefreshing = false
+        swipeRefresh.isEnabled = true
         progressBar.visibility = View.GONE
         loginPanel.visibility = View.GONE
         swipeRefresh.visibility = View.GONE
@@ -349,6 +354,14 @@ class MainActivity : AppCompatActivity() {
         fun syncMedicationReminders(json: String) {
             runOnUiThread {
                 MedicationReminderScheduler.sync(this@MainActivity, json)
+            }
+        }
+
+        @android.webkit.JavascriptInterface
+        fun setSwipeRefreshEnabled(enabled: Boolean) {
+            runOnUiThread {
+                swipeRefresh.isRefreshing = false
+                swipeRefresh.isEnabled = enabled
             }
         }
 
